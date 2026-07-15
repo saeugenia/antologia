@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historia Interactiva: Acheron-9</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+
+        body {
+            background-color: #020617; /* Slate 950 */
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #weather-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        #lightning-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            opacity: 0;
+            z-index: 2;
+            pointer-events: none;
+            transition: opacity 0.1s;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7); /* Slate 900 semi transparente */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.15);
+            border-radius: 16px;
+            z-index: 10;
+            width: 95%;
+            max-width: 800px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header-bar {
+            background: linear-gradient(90deg, rgba(14,165,233,0.2) 0%, rgba(2,6,23,0) 100%);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.4);
+        }
+
+        #image-container {
+            width: 100%;
+            height: 250px;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .scene-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: kenburns 10s infinite alternate ease-in-out;
+            opacity: 0;
+            transition: opacity 0.8s ease-in;
+        }
+
+        @keyframes kenburns {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        #text-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            font-size: 1.2rem;
+            line-height: 1.6;
+            scrollbar-width: thin;
+            scrollbar-color: #38bdf8 transparent;
+        }
+        
+        #text-area::-webkit-scrollbar { width: 6px; }
+        #text-area::-webkit-scrollbar-thumb { background-color: #38bdf8; border-radius: 10px; }
+
+        .story-text {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeUp 0.6s forwards;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 5px rgba(56,189,248,0.3);
+        }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .options-container {
+            padding: 1.5rem;
+            background: rgba(2, 6, 23, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            border-top: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .btn-option {
+            background: rgba(14, 165, 233, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
+            padding: 1rem;
+            text-align: left;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-option::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(56,189,248,0.2), transparent);
+            transition: all 0.4s ease;
+        }
+
+        .btn-option:hover {
+            background: rgba(14, 165, 233, 0.3);
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+            transform: translateX(5px);
+        }
+
+        .btn-option:hover::before {
+            left: 100%;
+        }
+
+        .ending-title {
+            color: #f43f5e; /* Rose 500 */
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 1rem;
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
+        }
+
+        /* SVG Filters */
+        .svg-filter {
+            filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="weather-canvas"></canvas>
+    <div id="lightning-overlay"></div>
+
+    <div class="glass-panel">
+        <div class="header-bar p-4 flex justify-between items-center">
+            <span class="text-sky-400 font-bold tracking-widest">COLONIA ACHERON-9 // TERMINAL DE SUPERVIVENCIA</span>
+            <span id="status-indicator" class="text-rose-500 font-bold animate-pulse">ALERTA DE BRECHA</span>
+        </div>
+
+        <div id="image-container">
+            <!-- La imagen SVG se inyectará aquí -->
+        </div>
+
+        <div id="text-area">
+            <!-- El texto de la historia se inyectará aquí -->
+        </div>
+
+        <div class="options-container" id="choices-area">
+        <!-- Los botones se inyectarán aquí -->
+    </div>
+    </div>
+
+    <script>
+        // --- ILUSTRACIONES REALISTAS (Vía API Dinámica) ---
+        const illustrations = {
+            base_exterior: 'https://image.pollinations.ai/prompt/cinematic%20dark%20stormy%20sci-fi%20colony%20base%20exterior%20night%20rain%20photorealistic?width=800&height=250&nologo=true&seed=15',
+            
+            corridor: 'https://image.pollinations.ai/prompt/dark%20creepy%20sci-fi%20spaceship%20corridor%20flashing%20lights%20photorealistic?width=800&height=250&nologo=true&seed=42',
+            
+            alien_shadow: 'https://image.pollinations.ai/prompt/terrifying%20biomechanical%20alien%20monster%20in%20dark%20shadows%20drooling%20acid%20photorealistic?width=800&height=250&nologo=true&seed=99',
+            
+            reactor: 'https://image.pollinations.ai/prompt/sci-fi%20glowing%20blue%20nuclear%20reactor%20core%20industrial%20photorealistic?width=800&height=250&nologo=true&seed=12',
+            
+            escape_pod: 'https://image.pollinations.ai/prompt/sci-fi%20escape%20pod%20interior%20looking%20out%20at%20space%20stars%20photorealistic?width=800&height=250&nologo=true&seed=55',
+            
+            comms_room: 'https://image.pollinations.ai/prompt/dark%20sci-fi%20communications%20control%20room%20static%20screens%20photorealistic?width=800&height=250&nologo=true&seed=77',
+
+            explosion: 'https://image.pollinations.ai/prompt/massive%20fiery%20explosion%20in%20space%20colony%20photorealistic?width=800&height=250&nologo=true&seed=88',
+
+            infected: 'https://image.pollinations.ai/prompt/close%20up%20human%20arm%20with%20creepy%20black%20alien%20veins%20infection%20body%20horror%20photorealistic?width=800&height=250&nologo=true&seed=33'
+        };
+
+        // --- NODOS DE LA HISTORIA ---
+        const storyNodes = {
+            inicio: {
+                text: "La tormenta azota implacablemente las cúpulas de la Colonia Acheron-9. El agua golpea el metal resonando en toda la instalación. Eres el Jefe de Seguridad del turno nocturno.\n\nDe repente, las luces parpadean y la consola principal emite un chirrido aterrador. 'ALERTA: BRECHA EN PERÍMETRO ESTE. SECTOR 4 COMPROMETIDO'. Las cámaras muestran movimiento, pero es demasiado rápido para identificarlo.",
+                image: illustrations.base_exterior,
+                options: [
+                    { text: "Acceder al Centro de Mando para rastrear la señal", nextNode: "centro_mando" },
+                    { text: "Correr a la Armería y equiparse inmediatamente", nextNode: "armeria" }
+                ]
+            },
+
+            centro_mando: {
+                text: "Entras al Centro de Mando. Los monitores parpadean. A través de la estática, ves una silueta alta, delgada, moviéndose por los conductos de ventilación. No es humano. Se mueve directamente hacia los barracones residenciales.\n\nTienes control total de las puertas desde aquí.",
+                image: illustrations.comms_room,
+                options: [
+                    { text: "Sellar los barracones y activar torretas automáticas", nextNode: "sellar_barracones" },
+                    { text: "Iniciar protocolo de evacuación general hacia las cápsulas", nextNode: "evacuacion_general" }
+                ]
+            },
+
+            armeria: {
+                text: "La armería está en penumbras. Tomas un rifle de asalto pesado con linterna integrada. El sudor frío recorre tu frente.\n\nEscuchas un sonido de garras raspando metal en el pasillo principal. Algo pesado acaba de caer del techo justo afuera de la armería.",
+                image: illustrations.corridor,
+                options: [
+                    { text: "Salir al pasillo principal apuntando con el rifle", nextNode: "pasillo_encuentro" },
+                    { text: "Buscar una ruta alternativa por los ductos de mantenimiento", nextNode: "muerte_ductos" }
+                ]
+            },
+
+            sellar_barracones: {
+                text: "Las puertas blindadas de los barracones caen con un estruendo pesado. Las torretas se activan, pero escuchas fuego cruzado y luego... el silencio.\n\nLas torretas han sido destrozadas. La criatura está cortando el blindaje de las puertas de los barracones con algún tipo de ácido. Si entra, será una masacre.",
+                image: illustrations.alien_shadow,
+                options: [
+                    { text: "Bajar al núcleo del reactor para sobrecargarlo y matarlo", nextNode: "reactor" },
+                    { text: "Huir a la bahía de cápsulas de escape tú solo", nextNode: "escape_solo_malo" }
+                ]
+            },
+
+            evacuacion_general: {
+                text: "Suena la alarma de evacuación. La gente corre desesperada por los pasillos. En el caos, la criatura desciende entre la multitud, desatando el pánico. \n\nDebes tomar una decisión rápida para salvar a la mayor cantidad de colonos posible.",
+                image: illustrations.corridor,
+                options: [
+                    { text: "Disparar a los tubos criogénicos para crear una cortina de humo", nextNode: "escape_limpio" },
+                    { text: "Enfrentar a la bestia cuerpo a cuerpo para distraerla", nextNode: "muerte_heroica" }
+                ]
+            },
+
+            pasillo_encuentro: {
+                text: "Sales al pasillo. La linterna ilumina una pesadilla biomecánica. Exoesqueleto oscuro, cola afilada, y múltiples mandíbulas.\n\nLa criatura sisea al sentir la luz y se prepara para saltar sobre ti.",
+                image: illustrations.alien_shadow,
+                options: [
+                    { text: "Vaciar el cargador directamente a su cabeza", nextNode: "disparar_alien" },
+                    { text: "Lanzar una granada incendiaria y correr al cuarto de comunicaciones", nextNode: "atrapado_comunicaciones" }
+                ]
+            },
+
+            reactor: {
+                text: "El calor en la sala del reactor es asfixiante. Inicias la secuencia de purga manual. La criatura interrumpe en la sala, derritiendo la puerta con su sangre ácida.\n\nTienes que mantener presionada la palanca principal durante 30 segundos para que la sobrecarga sea irreversible.",
+                image: illustrations.reactor,
+                options: [
+                    { text: "Sostener la palanca a toda costa, sin importar el dolor", nextNode: "sacrificio" },
+                    { text: "Soltarla e intentar correr a la puerta secundaria", nextNode: "muerte_reactor" }
+                ]
+            },
+
+            disparar_alien: {
+                text: "Las balas rebotan en gran parte de su coraza, pero logras darle en una articulación. La criatura chilla y retrocede, pero su sangre salpica, quemándote el brazo gravemente a través del traje.\n\nAprovechas la ventana de oportunidad para correr hacia la cápsula de escape.",
+                image: illustrations.infected,
+                options: [
+                    { text: "Subir a la cápsula y despegar inmediatamente", nextNode: "final_infectado" }
+                ]
+            },
+
+            // --- FINALES ---
+            
+            muerte_ductos: {
+                isEnding: true,
+                title: "FINAL 1: PRESA FÁCIL",
+                text: "Te arrastras por los conductos polvorientos. De repente, escuchas una respiración rasposa justo detrás de ti. No tienes espacio para girar el rifle. En la oscuridad, algo te arrastra hacia atrás. Tus gritos son silenciados por la tormenta exterior.",
+                image: illustrations.alien_shadow
+            },
+
+            escape_solo_malo: {
+                isEnding: true,
+                title: "FINAL 1: PRESA FÁCIL (Cobardía)",
+                text: "Abandonas a los colonos a su suerte y corres hacia las cápsulas. Al abrir la escotilla de la tuya, descubres que la criatura ya había anidado allí. Te esperaba. En el espacio aislado de la cápsula, nadie puede oírte gritar.",
+                image: illustrations.alien_shadow
+            },
+
+            muerte_heroica: {
+                isEnding: true,
+                title: "FINAL 2: SACRIFICIO SUPREMO",
+                text: "Te lanzas contra la bestia empuñando solo tu cuchillo de combate. Es un combate brutal y corto, pero logras mantenerla ocupada el tiempo exacto. Escuchas el despegue de las cápsulas justo antes de que la oscuridad te envuelva. Salvaste a tu gente.",
+                image: illustrations.alien_shadow
+            },
+
+            sacrificio: {
+                isEnding: true,
+                title: "FINAL 2: FUEGO PURIFICADOR",
+                text: "La criatura te atraviesa con su cola, pero te aferras a la palanca del reactor con tu último aliento. Las alarmas cambian a un tono continuo. Una explosión masiva ilumina el planeta tormentoso, erradicando a la criatura y salvando al resto de la galaxia de su propagación.",
+                image: illustrations.explosion
+            },
+            
+            muerte_reactor: {
+                isEnding: true,
+                title: "FINAL 1: PRESA FÁCIL (El Pánico)",
+                text: "El miedo te domina. Sueltas la palanca e intentas correr. La criatura es infinitamente más rápida. Te atrapa antes de que des tres pasos. La colonia caerá.",
+                image: illustrations.alien_shadow
+            },
+
+            escape_limpio: {
+                isEnding: true,
+                title: "FINAL 3: EVASIÓN TÁCTICA",
+                text: "El humo criogénico envuelve el pasillo, cegando los sensores térmicos de la criatura. Tú y el grupo de colonos logran llegar a las cápsulas sin ser detectados. Son expulsados hacia el espacio seguro. Son los únicos sobrevivientes de Acheron-9.",
+                image: illustrations.escape_pod
+            },
+
+            atrapado_comunicaciones: {
+                isEnding: true,
+                title: "FINAL 4: LA ESPERA INTERMINABLE",
+                text: "La granada bloquea el pasillo con un muro de fuego. Logras sellar la puerta blindada de comunicaciones. Envías un SOS al espacio profundo. Ahora, solo puedes escuchar a la criatura rondando afuera, golpeando el metal. Tienes raciones para tres días. ¿Llegará la ayuda a tiempo?",
+                image: illustrations.comms_room
+            },
+
+            final_infectado: {
+                isEnding: true,
+                title: "FINAL 5: EL PASAJERO OSCURO",
+                text: "La cápsula se aleja de la superficie tormentosa del planeta. Estás a salvo. Te quitas el casco, suspirando aliviado. Sin embargo, al mirar la quemadura en tu brazo, notas un movimiento extraño bajo la piel. Pequeñas venas negras se extienden. Escapaste, pero no estás solo.",
+                image: illustrations.infected
+            }
+        };
+
+        const textArea = document.getElementById('text-area');
+        const choicesArea = document.getElementById('choices-area');
+        const imageContainer = document.getElementById('image-container');
+        const statusIndicator = document.getElementById('status-indicator');
+
+        // Función para cambiar de escena
+        function renderNode(nodeId) {
+            const node = storyNodes[nodeId];
+            if (!node) return;
+
+            // Limpiar áreas
+            textArea.innerHTML = '';
+            choicesArea.innerHTML = '';
+            
+            // Actualizar imagen con animación
+            const imgEl = document.createElement('img');
+            imgEl.src = node.image;
+            // Hemos removido el 'svg-filter' para que las fotos se vean mejor
+            imgEl.className = 'scene-image'; 
+            // Fallback en caso de que la API de imágenes falle
+            imgEl.onerror = () => { imgEl.src = 'https://placehold.co/800x250/020617/38bdf8?text=CONEXIÓN+VISUAL+PERDIDA'; };
+            
+            imageContainer.innerHTML = '';
+            imageContainer.appendChild(imgEl);
+            
+            // Forzar reflow para reiniciar la animación de opacidad
+            void imgEl.offsetWidth; 
+            imgEl.style.opacity = '1';
+
+            // Insertar texto de la historia
+            const paragraphs = node.text.split('\n\n');
+            paragraphs.forEach((p, idx) => {
+                const pEl = document.createElement('p');
+                pEl.className = 'story-text';
+                pEl.style.animationDelay = `${idx * 0.2}s`;
+                pEl.textContent = p;
+                textArea.appendChild(pEl);
+            });
+
+            // Lógica si es un final o si hay opciones
+            if (node.isEnding) {
+                statusIndicator.textContent = "SIMULACIÓN TERMINADA";
+                statusIndicator.classList.remove('animate-pulse', 'text-rose-500');
+                statusIndicator.classList.add('text-sky-400');
+
+                setTimeout(() => {
+                    const titleEl = document.createElement('h2');
+                    titleEl.className = 'ending-title story-text';
+                    titleEl.textContent = node.title;
+                    textArea.appendChild(titleEl);
+                    textArea.scrollTop = textArea.scrollHeight;
+
+                    // Botón de reinicio
+                    const restartBtn = document.createElement('button');
+                    restartBtn.className = 'btn-option mt-4 text-center text-rose-400 border-rose-500';
+                    restartBtn.textContent = "[ INICIAR NUEVA SIMULACIÓN ]";
+                    restartBtn.onclick = () => {
+                        statusIndicator.textContent = "ALERTA DE BRECHA";
+                        statusIndicator.classList.add('animate-pulse', 'text-rose-500');
+                        statusIndicator.classList.remove('text-sky-400');
+                        renderNode('inicio');
+                    };
+                    choicesArea.appendChild(restartBtn);
+                }, paragraphs.length * 200 + 400);
+            } else {
+                // Renderizar botones de opciones
+                setTimeout(() => {
+                    node.options.forEach((opt, idx) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn-option';
+                        btn.style.animation = `fadeUp 0.4s forwards ${idx * 0.2}s`;
+                        btn.style.opacity = '0';
+                        btn.textContent = `> ${opt.text}`;
+                        btn.onclick = () => renderNode(opt.nextNode);
+                        choicesArea.appendChild(btn);
+                    });
+                }, paragraphs.length * 200);
+            }
+
+            // Auto-scroll smooth
+            setTimeout(() => {
+                textArea.scrollTo({
+                    top: textArea.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+        }
+
+        // --- SISTEMA DE CLIMA (Lluvia y Relámpagos) ---
+        function initWeather() {
+            const canvas = document.getElementById('weather-canvas');
+            const ctx = canvas.getContext('2d');
+            const lightningOverlay = document.getElementById('lightning-overlay');
+
+            let width, height;
+            const drops = [];
+            const dropCount = 200; // Tormenta fuerte
+
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+
+            // Inicializar gotas
+            for(let i = 0; i < dropCount; i++) {
+                drops.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    len: Math.random() * 25 + 15,
+                    speed: Math.random() * 15 + 15, // Lluvia rápida
+                    angle: 0.1 // Viento lateral
+                });
+            }
+
+            function drawRain() {
+                ctx.clearRect(0, 0, width, height);
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)'; // Lluvia color cian brillante
+                ctx.lineWidth = 1.5;
+                ctx.lineCap = 'round';
+
+                ctx.beginPath();
+                for(let i = 0; i < dropCount; i++) {
+                    const drop = drops[i];
+                    ctx.moveTo(drop.x, drop.y);
+                    ctx.lineTo(drop.x + (drop.len * drop.angle), drop.y + drop.len);
+
+                    drop.x += drop.speed * drop.angle;
+                    drop.y += drop.speed;
+
+                    // Reiniciar gota si sale de pantalla
+                    if (drop.y > height || drop.x > width) {
+                        drop.y = -drop.len;
+                        drop.x = Math.random() * width * 1.5 - (width * 0.2); // Aparecer más a la izquierda por el viento
+                    }
+                }
+                ctx.stroke();
+
+                // Lógica de relámpagos aleatorios
+                if (Math.random() < 0.005) { // 0.5% de probabilidad por frame
+                    triggerLightning();
+                }
+
+                requestAnimationFrame(drawRain);
+            }
+
+            function triggerLightning() {
+                lightningOverlay.style.opacity = Math.random() * 0.4 + 0.2; // Brillo aleatorio
+                setTimeout(() => {
+                    lightningOverlay.style.opacity = 0;
+                    // Probabilidad de relámpago doble
+                    if (Math.random() > 0.5) {
+                        setTimeout(() => {
+                            lightningOverlay.style.opacity = Math.random() * 0.6 + 0.3;
+                            setTimeout(() => { lightningOverlay.style.opacity = 0; }, 50);
+                        }, 100);
+                    }
+                }, 50);
+            }
+
+            drawRain();
+        }
+
+        // Iniciar todo al cargar
+        window.onload = () => {
+            initWeather();
+            renderNode('inicio');
+        };
+    </script>
+</body>
+</html>
