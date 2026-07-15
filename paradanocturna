@@ -1,0 +1,486 @@
+Edward - Angel
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parada Nocturna - 100 Finales</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Jolly+Lodger&family=Roboto:wght@300;400;700&display=swap');
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #050505; color: #d0d0d0;
+            font-family: 'Roboto', sans-serif;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        #game-container {
+            position: relative; width: 100%; max-width: 900px; height: 100%; max-height: 700px;
+            background-color: #000; box-shadow: 0 0 30px rgba(100, 0, 0, 0.2);
+            border: 1px solid #222; border-radius: 12px; overflow: hidden;
+        }
+
+        canvas {
+            display: block; width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; z-index: 1;
+        }
+
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.15));
+            background-size: 100% 4px; z-index: 10; pointer-events: none; opacity: 0.7;
+        }
+
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 150px rgba(0,0,0,0.95); z-index: 9; pointer-events: none;
+        }
+
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20; display: flex; flex-direction: column; justify-content: flex-end;
+            pointer-events: none;
+        }
+
+        #text-box {
+            background: rgba(10, 10, 12, 0.9); border-top: 2px solid #500;
+            padding: 25px; min-height: 150px; margin: 0 15px 15px 15px;
+            border-radius: 8px; font-size: 1.15em; line-height: 1.5;
+            pointer-events: auto; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+        }
+        
+        #text-content { margin-bottom: 20px; text-shadow: 1px 1px 3px #000; }
+        
+        .time-display { color: #8b0000; font-family: 'Creepster', cursive; font-size: 1.3em; letter-spacing: 2px; }
+
+        .title-font {
+            font-family: 'Creepster', cursive; color: #a00;
+            text-align: center; font-size: 4em; text-shadow: 3px 3px 10px #000;
+            margin-bottom: 5px;
+        }
+
+        #choices-container { display: flex; flex-direction: column; gap: 12px; pointer-events: auto; }
+
+        .choice-btn {
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            color: #ddd; border: 1px solid #444; padding: 12px 20px;
+            border-radius: 6px; cursor: pointer; font-family: 'Roboto', sans-serif;
+            font-size: 1.05em; transition: all 0.2s; text-align: left;
+            position: relative; overflow: hidden;
+        }
+
+        .choice-btn:hover { border-color: #8b0000; color: #fff; box-shadow: 0 0 15px rgba(139,0,0,0.4); }
+        .choice-btn:active { transform: scale(0.98); }
+
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000; z-index: 30; display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 1.5s ease;
+        }
+
+        #start-btn {
+            padding: 15px 40px; font-size: 1.8em; background-color: #8b0000;
+            color: white; border: 1px solid #f00; border-radius: 5px;
+            cursor: pointer; font-family: 'Creepster', cursive;
+            transition: all 0.3s; box-shadow: 0 0 20px rgba(139,0,0,0.5);
+            margin-top: 20px;
+        }
+
+        #start-btn:hover { background-color: #600; transform: scale(1.05); }
+
+        @keyframes flicker {
+            0% { opacity: 0.95; } 5% { opacity: 0.85; } 10% { opacity: 0.95; }
+            15% { opacity: 1; } 100% { opacity: 1; }
+        }
+        .flicker { animation: flicker 4s infinite alternate; }
+        .ending-text { color: #ff3333; font-weight: bold; }
+        .win-text { color: #aaaaff; font-weight: bold; text-shadow: 0 0 10px #5555ff; }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container" class="flicker">
+        <canvas id="gameCanvas"></canvas>
+        <div class="scanlines"></div>
+        <div class="vignette"></div>
+        
+        <div id="ui-layer">
+            <div id="text-box" style="display: none;">
+                <div id="text-content"></div>
+                <div id="choices-container"></div>
+            </div>
+        </div>
+
+        <div id="overlay">
+            <h1 class="title-font">Parada Nocturna</h1>
+            <h3 style="color: #666; font-family: 'Roboto'; margin-top:-10px;">El Último Viaje</h3>
+            <p style="text-align: center; max-width: 650px; margin-bottom: 20px; color: #999; line-height: 1.6; padding: 20px;">
+                Son las 3:15 AM. El frío te cala hasta los huesos mientras esperas el último autobús en una carretera olvidada. La espesa niebla aísla este lugar del resto del mundo civilizado.<br><br>
+                Presta mucha atención a los detalles, no confíes en tus sentidos y, sobre todo, no te dejes llevar por el pánico. Tus decisiones hilarán una historia con 10 finales distintos. Solo uno te llevará a casa.
+            </p>
+            <button id="start-btn">Adentrarse en la Niebla</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const textContent = document.getElementById('text-content');
+        const choicesContainer = document.getElementById('choices-container');
+        const textBox = document.getElementById('text-box');
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('start-btn');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        let fogOffset = 0;
+        let isLightFlickering = false;
+        let activeVisuals = ['base'];
+        let isDead = false;
+
+        const storyNodes = {
+            start: {
+                time: "3:15 AM",
+                text: "El viento aúlla suavemente a través de los pinos que flanquean la carretera desierta. La humedad de la niebla te empapa la ropa y el silencio absoluto del bosque se vuelve opresivo. De repente, escuchas un crujido húmedo, como si algo grande y pesado, compuesto de carne y huesos rotos, se arrastrara entre los árboles justo a tus espaldas, acechando fuera del límite de la luz amarilla de la farola.",
+                visual: "base",
+                choices: [
+                    { text: "Encender la linterna del teléfono y adentrarte en el bosque para investigar.", next: "end_1" },
+                    { text: "Entrar en pánico y huir corriendo a toda velocidad por la carretera negra.", next: "end_2" },
+                    { text: "Sentarte lentamente en el banco, obligarte a ignorar el ruido y no hacer movimientos bruscos.", next: "node_2" }
+                ]
+            },
+            end_1: {
+                time: "3:17 AM",
+                text: "FINAL 1: CURIOSIDAD FATAL. Caminas entre los árboles, barriendo la oscuridad con la débil luz de tu teléfono. El haz de luz ilumina momentáneamente una masa amorfa de miembros pálidos entrelazados. Antes de que puedas gritar, la entidad te envuelve. Sientes cómo docenas de manos frías te arrastran bajo la tierra mojada. Nadie escuchará tus gritos amortiguados por el barro.",
+                isEnding: true, isWin: false
+            },
+            end_2: {
+                time: "3:20 AM",
+                text: "FINAL 2: EL BUCLE DEL TERROR. El miedo te domina. Corres ciegamente por el asfalto helado, con el corazón latiendo a mil por hora. Tras 20 minutos de carrera exhaustiva, la niebla se disipa de golpe. Te detienes en seco. Estás exactamente en la misma parada de autobús. Corres de nuevo, pero siempre regresas. Pasas la eternidad corriendo en un bucle temporal sin fin, hasta que tu corazón finalmente colapsa.",
+                isEnding: true, isWin: false
+            },
+            node_2: {
+                time: "3:25 AM",
+                text: "Te aferras al frío metal del banco y clavas la mirada en el asfalto. El sonido húmedo se desvanece lentamente en la lejanía. Has sobrevivido... por ahora. Sin embargo, la vieja farola sobre ti comienza a emitir un zumbido eléctrico insoportable. Parpadea violentamente y, de pronto, la luz se torna de un carmesí profundo, tiñendo la niebla de color sangre. Las sombras de la parada comienzan a alargarse de forma antinatural, extendiéndose hacia ti como garras negras.",
+                visual: "crimson_light",
+                choices: [
+                    { text: "Mirar fijamente la bombilla roja, paralizado por la hipnosis del color.", next: "end_3" },
+                    { text: "Deslizarte bajo el banco, cerrar los ojos con fuerza y taparte los oídos.", next: "node_3" }
+                ]
+            },
+            end_3: {
+                time: "3:26 AM",
+                text: "FINAL 3: CEGUERA CARMESÍ. Alzas la vista y miras directamente al centro de la luz sangrienta. La luz no es eléctrica; es un ojo inabarcable que te devuelve la mirada desde otra dimensión. Su brillo calcina tus retinas instantáneamente. Mientras quedas ciego, tu mente se quiebra por la inmensidad de lo que acabas de presenciar, reduciéndote a un cascarón vacío balbuceando en la acera.",
+                isEnding: true, isWin: false
+            },
+            node_3: {
+                time: "3:40 AM",
+                text: "El zumbido se detiene abruptamente. Abres los ojos y la luz ha vuelto a ser de un pálido color amarillo. Te levantas del suelo, sacudiéndote el polvo, pero ya no estás solo. En el otro extremo de la marquesina, de pie e inmóvil, hay una figura idéntica a ti. Lleva tu misma ropa, tiene tu mismo rostro, pero sus ojos son cuencas negras y vacías. Te sonríe lentamente, de forma torcida, y levanta una mano como si quisiera que te acerques.",
+                visual: "doppelganger",
+                choices: [
+                    { text: "Acercarte y hablarle amablemente, preguntando qué quiere.", next: "end_4" },
+                    { text: "Atacarlo. Lanzarte sobre la entidad antes de que ella te ataque a ti.", next: "end_5" },
+                    { text: "Ignorarlo. Sacar tu teléfono celular, fingir que lees algo y no hacer contacto visual.", next: "node_4" }
+                ]
+            },
+            end_4: {
+                time: "3:41 AM",
+                text: "FINAL 4: EL SUSTITUTO. Das un paso hacia tu doble y emites un débil saludo. La entidad no habla. Su mano fría agarra tu muñeca con una fuerza sobrehumana. En un segundo, sientes cómo tu esencia es succionada. Tu visión se oscurece mientras ves, a través de los ojos de la criatura, cómo toma tu lugar, lista para vivir tu vida y engañar a tus seres queridos. Tú has quedado atrapado en el espejo del abismo.",
+                isEnding: true, isWin: false
+            },
+            end_5: {
+                time: "3:41 AM",
+                text: "FINAL 5: SOMBRA FRAGMENTADA. El instinto de supervivencia se apodera de ti. Gritas y te abalanzas para golpear al impostor. Pero tus puños no impactan contra carne, sino que atraviesan una neblina densa y gélida. La inercia te hace caer al suelo. El doble se disuelve y se filtra a través de tus poros, congelando tus venas desde dentro. Mueres de hipotermia en segundos, convertido en una estatua de hielo humano.",
+                isEnding: true, isWin: false
+            },
+            node_4: {
+                time: "3:48 AM",
+                text: "Mantienes la mirada fija en la pantalla apagada de tu celular. Sientes el frío aliento de la criatura cerca de tu cuello, pero no cedes. Segundos después, la temperatura se regula. Levantas la vista y el doble ha desaparecido. De repente, el silencio es roto por el estruendoso repique de un viejo teléfono público oxidado pegado al lateral de la marquesina. El auricular cuelga, balanceándose. Un líquido espeso y oscuro comienza a gotear de la bocina.",
+                visual: "base",
+                choices: [
+                    { text: "Levantar el auricular lentamente y escuchar.", next: "end_6" },
+                    { text: "Tomar una piedra del suelo y destrozar el teléfono para que deje de sonar.", next: "end_7" },
+                    { text: "Alejarte varios pasos hacia la carretera, tapándote los oídos hasta que cese.", next: "node_5" }
+                ]
+            },
+            end_6: {
+                time: "3:49 AM",
+                text: "FINAL 6: LA VOZ DEL ABISMO. Te acercas al teléfono. El olor a hierro oxidado es intenso. Al llevar el auricular a tu oreja, no escuchas palabras, sino un coro incomprensible de lamentos agonizantes provenientes de almas atrapadas. La frecuencia del sonido es un parásito auditivo; se incrusta en tu cerebro, devorando tus recuerdos y tu cordura. Mueres de un aneurisma masivo sin poder soltar el auricular.",
+                isEnding: true, isWin: false
+            },
+            end_7: {
+                time: "3:49 AM",
+                text: "FINAL 7: CORTOCIRCUITO ESPIRITUAL. El ruido es insoportable. En un ataque de ira, tomas una pesada piedra y golpeas el plástico duro del teléfono repetidas veces. Al romper la carcasa, un arco de energía negra residual estalla desde los cables expuestos. Te golpea de lleno en el pecho, deteniendo tu corazón al instante y dejándote carbonizado sobre el asfalto húmedo.",
+                isEnding: true, isWin: false
+            },
+            node_5: {
+                time: "3:55 AM",
+                text: "Retrocedes hasta el límite de la calzada. El teléfono suena desesperadamente durante un minuto eterno, hasta que se detiene de golpe. Un silencio mortal regresa. Entonces, lo escuchas: el sonido de un motor pesado. Dos luces amarillas atraviesan la niebla. Un autobús se detiene frente a ti, pero algo está horriblemente mal. La pintura parece palpitar como si fuera piel viva, las ventanas rezuman un líquido espeso, y el conductor en las sombras no tiene rostro.",
+                visual: "flesh_bus",
+                choices: [
+                    { text: "Subir al autobús. Es tu única forma de ir a casa y no soportas más el frío.", next: "end_8" },
+                    { text: "Quedarte paralizado frente a la puerta abierta, mirando al conductor sin rostro.", next: "end_9" },
+                    { text: "Retroceder lentamente, ocultarte detrás de la marquesina y dejar que se vaya.", next: "node_6" }
+                ]
+            },
+            end_8: {
+                time: "3:56 AM",
+                text: "FINAL 8: DIGESTIÓN. Subes los escalones. El interior es cálido, demasiado cálido, y huele a carne podrida. En cuanto pones un pie dentro, las puertas se cierran de golpe detrás de ti con el sonido de dientes chocando. Los asientos se deforman y te atrapan. Te das cuenta tarde de que no has subido a un vehículo; has entrado voluntariamente en las fauces de una bestia que ha evolucionado para cazar en esta carretera maldita.",
+                isEnding: true, isWin: false
+            },
+            end_9: {
+                time: "3:56 AM",
+                text: "FINAL 9: EL CONDUCTOR. El miedo te enraíza al suelo. La puerta abierta expide un vaho nauseabundo. El conductor sin rostro gira lentamente su cabeza hacia ti. De pronto, unos largos brazos pálidos y esqueléticos se extienden desde la oscuridad del volante, te agarran por el cuello y te arrastran brutalmente hacia adentro. El autobús arranca a toda velocidad hacia la niebla eterna de la que nunca volverás.",
+                isEnding: true, isWin: false
+            },
+            node_6: {
+                time: "4:00 AM",
+                text: "Con el corazón en la garganta, retrocedes despacio, cuidando de no hacer ruido, y te acurrucas detrás del frío cristal de la marquesina. Escuchas las puertas cerrarse con pesadez. El horrible vehículo arranca, perdiéndose en la oscuridad. Sientes que has estado conteniendo la respiración por horas. Miras tu reloj. Son las 4:00 AM en punto. Un cambio sutil ocurre en el aire; la niebla parece menos densa. A lo lejos, escuchas otro motor.",
+                visual: "base",
+                choices: [
+                    { text: "Salir de tu escondite y esperar al autobús de las 4:00 AM.", next: "end_10" }
+                ]
+            },
+            end_10: {
+                time: "6:00 AM",
+                text: "FINAL 10: EL AMANECER. Un autobús municipal de línea regular, algo abollado pero normal, se detiene frente a ti con un chirrido de frenos. Las puertas se abren. El conductor, un hombre mayor y de aspecto cansado, te mira extrañado y dice: '¿Qué haces aquí chico? Nadie usa esta parada de noche'. Pagas tu boleto y te sientas cerca de la ventana. Mientras el autobús se aleja, ves los primeros rayos del sol disipar la niebla. Has sobrevivido a la Parada Nocturna.",
+                isEnding: true, isWin: true
+            }
+        };
+
+        let currentNode = null;
+
+        function startGame() {
+            isDead = false;
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                textBox.style.display = 'block';
+                resizeCanvas();
+                renderNode('start');
+                drawCurrentScene(); // Inicia el loop del canvas
+            }, 1000);
+        }
+
+        function renderNode(nodeId) {
+            currentNode = storyNodes[nodeId];
+            
+            // Si es un final, manejamos el estado de muerte
+            if (currentNode.isEnding) {
+                isDead = true;
+                let outcomeClass = currentNode.isWin ? 'win-text' : 'ending-text';
+                
+                textContent.innerHTML = `<span class="time-display">[${currentNode.time}]</span><br><br><span class="${outcomeClass}">${currentNode.text}</span>`;
+                
+                if (currentNode.isWin) {
+                    activeVisuals = ['sunrise'];
+                } else {
+                    activeVisuals = ['pitch_black'];
+                }
+
+                choicesContainer.innerHTML = '';
+                const restartBtn = document.createElement('button');
+                restartBtn.className = 'choice-btn';
+                restartBtn.style.marginTop = "20px";
+                restartBtn.innerText = "Jugar de Nuevo";
+                restartBtn.onclick = () => {
+                    overlay.style.display = 'flex';
+                    setTimeout(() => {
+                        overlay.style.opacity = '1';
+                        textBox.style.display = 'none';
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = '#050505';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }, 100);
+                };
+                choicesContainer.appendChild(restartBtn);
+                return;
+            }
+
+            // Renderizado normal del nodo
+            activeVisuals = ['base', currentNode.visual];
+            textContent.innerHTML = `<span class="time-display">[${currentNode.time}]</span><br><br>${currentNode.text}`;
+            
+            choicesContainer.innerHTML = '';
+            currentNode.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerText = choice.text;
+                btn.onclick = () => {
+                    // Efecto de parpadeo de pantalla al hacer clic
+                    document.getElementById('game-container').classList.remove('flicker');
+                    void document.getElementById('game-container').offsetWidth;
+                    document.getElementById('game-container').classList.add('flicker');
+                    
+                    renderNode(choice.next);
+                };
+                choicesContainer.appendChild(btn);
+            });
+        }
+
+        function drawBusStop(x, y, scale, isCrimson = false) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+
+            // Calle y acera
+            ctx.fillStyle = '#1a1a1a'; ctx.fillRect(-800, 100, 1600, 400);
+            ctx.fillStyle = '#222'; ctx.fillRect(-800, 50, 1600, 50);
+            ctx.fillStyle = '#111'; ctx.fillRect(-800, 100, 1600, 10);
+
+            // Marquesina de la parada
+            ctx.fillStyle = '#0f0f0f'; ctx.fillRect(-150, -150, 300, 200);
+            ctx.fillStyle = 'rgba(40, 50, 60, 0.2)'; // Cristal
+            ctx.fillRect(-140, -140, 90, 180);
+            ctx.fillRect(-40, -140, 180, 180);
+            
+            // Banco
+            ctx.fillStyle = '#3a2010'; 
+            ctx.fillRect(-120, 0, 240, 20); ctx.fillRect(-120, -40, 240, 20); 
+            ctx.fillStyle = '#111'; ctx.fillRect(-100, 20, 10, 30); ctx.fillRect(90, 20, 10, 30);
+
+            // Letrero BUS
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-180, -100, 20, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.fillText("BUS", -180, -95);
+            ctx.fillStyle = '#222'; ctx.fillRect(-185, -80, 10, 130);
+
+            // Farola
+            ctx.fillStyle = '#111'; ctx.fillRect(200, -350, 15, 400); 
+            ctx.beginPath(); ctx.moveTo(200, -350); ctx.lineTo(250, -360); ctx.lineTo(260, -340); ctx.lineTo(215, -340); ctx.fill();
+            
+            // Origen de la luz
+            let lightOpacity = isLightFlickering ? 0.1 + Math.random() * 0.4 : 0.85;
+            let lightColorSource = isCrimson ? `rgba(255, 50, 50, ${lightOpacity})` : `rgba(255, 255, 200, ${lightOpacity})`;
+            ctx.fillStyle = lightColorSource;
+            ctx.beginPath(); ctx.arc(245, -335, 12, 0, Math.PI * 2); ctx.fill();
+
+            // Cono de luz (Gradiente)
+            let gradient = ctx.createLinearGradient(245, -335, 245, 100);
+            let colorStopStart = isCrimson ? `rgba(200, 0, 0, ${lightOpacity * 0.4})` : `rgba(255, 255, 150, ${lightOpacity * 0.3})`;
+            let colorStopEnd = isCrimson ? 'rgba(100, 0, 0, 0)' : 'rgba(255, 255, 150, 0)';
+            
+            gradient.addColorStop(0, colorStopStart);
+            gradient.addColorStop(1, colorStopEnd);
+            ctx.fillStyle = gradient;
+            ctx.beginPath(); ctx.moveTo(245, -335); ctx.lineTo(0, 100); ctx.lineTo(490, 100); ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawFigure(x, y, opacity, isTall = false) {
+            ctx.save(); ctx.translate(x, y); ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+            if (isTall) {
+                ctx.fillRect(-15, -280, 30, 280); 
+                ctx.beginPath(); ctx.arc(0, -290, 15, 0, Math.PI * 2); ctx.fill();
+                ctx.fillRect(-25, -250, 10, 200); ctx.fillRect(15, -250, 10, 200);
+            } else {
+                ctx.fillRect(-20, -150, 40, 150);
+                ctx.beginPath(); ctx.arc(0, -165, 20, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawFleshBus(x, y, opacity) {
+            ctx.save(); ctx.translate(x, y); ctx.globalAlpha = opacity;
+            // Carrocería carnosa
+            ctx.fillStyle = '#4a0515'; ctx.fillRect(-350, -180, 700, 180);
+            ctx.fillStyle = '#2d020a';
+            for(let i = -320; i < 320; i+= 70) ctx.fillRect(i, -140, 50, 70); // Ventanas oscuras
+            // Ruedas extrañas
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-220, 0, 45, 0, Math.PI*2); ctx.arc(220, 0, 45, 0, Math.PI*2); ctx.fill();
+            // Luces amarillentas enfermas
+            ctx.fillStyle = 'rgba(200, 255, 50, 0.7)'; ctx.beginPath(); ctx.arc(330, -40, 15, 0, Math.PI * 2); ctx.fill();
+            // Detalles orgánicos (venas/textura)
+            ctx.strokeStyle = '#220000'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(-300, -50); ctx.quadraticCurveTo(-150, 0, 100, -80); ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawFog() {
+            ctx.save(); ctx.globalAlpha = 0.4;
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, '#0a0a0a'); gradient.addColorStop(0.5, '#333'); gradient.addColorStop(1, '#0a0a0a');
+            ctx.fillStyle = gradient;
+            fogOffset += 0.4; if(fogOffset > canvas.width) fogOffset = 0;
+            for(let i = 0; i < 6; i++) {
+                ctx.beginPath(); ctx.arc((fogOffset + i * 250) % (canvas.width + 500) - 250, canvas.height / 2 + Math.sin(fogOffset * 0.01 + i) * 60, 350, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawCurrentScene() {
+            if (!isDead && document.getElementById('text-box').style.display !== 'none') {
+                requestAnimationFrame(drawCurrentScene);
+            }
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2; const cy = canvas.height / 2;
+            const scale = Math.min(canvas.width / 800, canvas.height / 600) * 1.5;
+
+            // Fondo negro base
+            ctx.fillStyle = '#030304'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Parpadeo de luz basado en la escena
+            isLightFlickering = activeVisuals.includes('crimson_light') ? Math.random() > 0.3 : Math.random() > 0.95;
+
+            // Manejo de finales gráficos
+            if (activeVisuals.includes('sunrise')) {
+                let grad = ctx.createLinearGradient(0,0,0,canvas.height);
+                grad.addColorStop(0, '#5a3f2d'); grad.addColorStop(1, '#112');
+                ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+                drawBusStop(cx, cy + 100 * scale, scale, false);
+                return; // Corta la niebla y otras cosas
+            } 
+            if (activeVisuals.includes('pitch_black')) {
+                ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            
+            // Niebla de fondo
+            drawFog();
+
+            // Dibujar entorno base
+            let isCrimson = activeVisuals.includes('crimson_light');
+            drawBusStop(cx, cy + 100 * scale, scale, isCrimson);
+            
+            // Entidades y Anomalías según la historia
+            if (activeVisuals.includes('doppelganger')) {
+                drawFigure(cx - 100 * scale, cy + 50 * scale, 0.8, false);
+                // Ojos rojos del doppelganger
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+                ctx.beginPath(); ctx.arc(cx - 105*scale, cy - 110*scale, 2, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cx - 95*scale, cy - 110*scale, 2, 0, Math.PI*2); ctx.fill();
+            }
+            if (activeVisuals.includes('flesh_bus')) {
+                drawFleshBus(cx, cy + 50 * scale, 0.95);
+            }
+            
+            // Niebla frontal
+            if(!activeVisuals.includes('crimson_light')) {
+                drawFog(); 
+            }
+
+            // Ruido CRT en pantalla
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Inicialización de eventos
+        startBtn.addEventListener('click', startGame);
+
+        window.onload = () => {
+            resizeCanvas();
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        };
+    </script>
+</body>
+</html>
