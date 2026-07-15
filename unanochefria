@@ -1,0 +1,295 @@
+Maria Paz - Samara
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sombra y Pelusa: Supervivencia en el Callejón</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0d1117;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e6edf3;
+            overflow: hidden;
+        }
+        /* El canvas servirá como fondo animado */
+        #bgCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        /* Contenedor de la interfaz superpuesta al canvas */
+        #ui-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 700px;
+            background: rgba(22, 27, 34, 0.85);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 30px;
+            z-index: 2;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            text-align: center;
+        }
+        h1 {
+            margin-top: 0;
+            color: #58a6ff;
+            font-size: 24px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 15px;
+        }
+        #story-text {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            min-height: 120px;
+            text-align: left;
+        }
+        .choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        button {
+            background-color: #238636;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            text-align: left;
+            font-weight: 500;
+        }
+        button:hover {
+            background-color: #2ea043;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .ending-title {
+            color: #f85149;
+            font-weight: bold;
+            font-size: 22px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .ending-good { color: #3fb950; }
+        .ending-neutral { color: #d29922; }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas para el fondo de lluvia -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Interfaz de la historia -->
+    <div id="ui-container">
+        <h1 id="node-title">Sombra y Pelusa</h1>
+        <div id="story-text">Cargando historia...</div>
+        <div class="choices-container" id="choices-box">
+            <!-- Los botones se generarán aquí con JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // --- ANIMACIÓN DEL CANVAS (Lluvia en el callejón) ---
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let drops = [];
+
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createDrops() {
+            for (let i = 0; i < 150; i++) {
+                drops.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    speed: Math.random() * 5 + 5,
+                    length: Math.random() * 20 + 10
+                });
+            }
+        }
+        createDrops();
+
+        function drawRain() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let i = 0; i < drops.length; i++) {
+                let d = drops[i];
+                ctx.moveTo(d.x, d.y);
+                ctx.lineTo(d.x - d.length * 0.2, d.y + d.length);
+                d.y += d.speed;
+                d.x -= d.speed * 0.2; // Lluvia con un poco de viento
+                
+                // Reiniciar gota si sale de la pantalla
+                if (d.y > height) {
+                    d.y = -20;
+                    d.x = Math.random() * width;
+                }
+            }
+            ctx.stroke();
+            requestAnimationFrame(drawRain);
+        }
+        drawRain();
+
+        // --- DATOS DE LA HISTORIA INTERACTIVA ---
+        const storyData = {
+            1: {
+                title: "La Noche Fría",
+                text: "Eres Sombra, un gato callejero curtido. A tu lado tiembla Pelusa, tu hermanita menor. Es una noche helada y la lluvia golpea los adoquines del callejón. De pronto, escuchas gruñidos. Tres perros callejeros, hambrientos y territoriales, han bloqueado la única salida del callejón. Te han visto.",
+                choices: [
+                    { text: "Trepar por una pila de cajas de madera inestables hacia el techo.", nextId: 2 },
+                    { text: "Esconderse rápidamente bajo el contenedor de basura oxidado.", nextId: 3 }
+                ]
+            },
+            2: {
+                title: "Las Cajas Resbaladizas",
+                text: "Empujas a Pelusa hacia las cajas. La madera está podrida y resbaladiza por la lluvia. Uno de los perros salta y sus mandíbulas chasquean a centímetros de la cola de tu hermana. El miedo la paraliza a mitad de camino.",
+                choices: [
+                    { text: "Empujar la caja superior para que caiga sobre el perro y ganar tiempo.", nextId: 4 },
+                    { text: "Ignorar al perro y dar un salto largo hacia la cornisa vecina, animando a Pelusa a seguirte.", nextId: 5 }
+                ]
+            },
+            3: {
+                title: "En la Oscuridad",
+                text: "Logran meterse bajo el contenedor justo a tiempo. Está oscuro y huele a humedad. Afuera, las patas de los perros chapotean en los charcos. De repente, un enorme hocico negro se asoma por debajo del contenedor, olfateando violentamente a centímetros de ustedes.",
+                choices: [
+                    { text: "Arañar el hocico del perro con todas tus fuerzas.", nextId: 6 },
+                    { text: "Quedarse completamente inmóvil, conteniendo la respiración y cubriendo a Pelusa con tu cuerpo.", nextId: 7 }
+                ]
+            },
+            4: {
+                title: "Derrumbe",
+                text: "Golpeas la caja con tus patas traseras. Cae pesadamente, golpeando al perro y asustando a la jauría. Se apartan, pero el perro más grande se queda, gruñendo ferozmente, bloqueando el camino hacia arriba.",
+                choices: [
+                    { text: "Bufar, erizarte y lanzarte a pelear para que Pelusa pueda huir.", nextId: 11 }, // Final 1
+                    { text: "Aprovechar el polvo y la confusión para escabullirse por el hueco en la pared.", nextId: 8 }
+                ]
+            },
+            5: {
+                title: "El Salto de Fe",
+                text: "Saltas con gracia y aterrizas en la cornisa. Pelusa toma impulso y salta, pero sus pequeñas garras resbalan en el concreto mojado. ¡Queda colgando del borde, maullando aterrorizada mientras los perros saltan tratando de alcanzarla!",
+                choices: [
+                    { text: "Arriesgarte a caer y agarrarla del cuello con los dientes para subirla.", nextId: 12 }, // Final 2
+                    { text: "Maullar con furia desde la cornisa para que los perros te miren a ti y no a ella.", nextId: 9 }
+                ]
+            },
+            6: {
+                title: "Furia Canina",
+                text: "Tus garras rasgan la nariz del perro. Chilla de dolor y retrocede, pero el olor a sangre enfurece a los otros dos. Comienzan a empujar el contenedor con sus cuerpos, intentando volcarlo para atraparlos.",
+                choices: [
+                    { text: "Correr a toda velocidad hacia la rejilla de la alcantarilla entreabierta.", nextId: 13 }, // Final 3
+                    { text: "Aprovechar que el contenedor se levanta para salir disparados hacia el jardín de la casa vecina.", nextId: 10 }
+                ]
+            },
+            7: {
+                title: "Silencio Tenso",
+                text: "No respiras. Pelusa tiembla pero no emite sonido. El perro huele unos restos de comida cercanos y pierde el interés. Tras unos minutos eternos, la jauría se aleja. Están a salvo de momento, pero la noche es gélida y necesitan refugio urgente.",
+                choices: [
+                    { text: "Buscar calor en las bodegas del mercado cercano.", nextId: 14 }, // Final 4
+                    { text: "Acercarse a la casa de la anciana al final de la calle que a veces deja leche.", nextId: 15 } // Final 5
+                ]
+            },
+            8: {
+                title: "Carrera por el Muro",
+                text: "Corres por el estrecho borde del muro con Pelusa pisándote los talones. El perro alfa las persigue desde abajo, ladrando enfurecido. El muro se termina pronto.",
+                choices: [
+                    { text: "Saltar hacia la calle principal, esperando que el tráfico asuste al perro.", nextId: 14 }, // Final 4
+                    { text: "Trepar desesperadamente por la enredadera de espinas hasta el tejado.", nextId: 12 } // Final 2
+                ]
+            },
+            9: {
+                title: "Un Error Fatal",
+                text: "Tu maullido distrae a los perros, permitiendo que Pelusa se ponga a salvo en la cornisa superior. Sin embargo, al intentar retroceder, una teja suelta cede bajo tu peso y caes de vuelta al callejón, justo en medio de la jauría.",
+                choices: [
+                    { text: "Pelear con uñas y dientes hasta el último aliento.", nextId: 11 }, // Final 1
+                    { text: "Rodar bajo sus patas y dejarte caer por el desagüe.", nextId: 13 } // Final 3
+                ]
+            },
+            10: {
+                title: "El Jardín Misterioso",
+                text: "Saltan la verja de hierro y aterrizan en un hermoso jardín con césped suave. Los perros ladran desde el otro lado, sin poder pasar. De repente, la luz del porche se enciende y una puerta rechina al abrirse.",
+                choices: [
+                    { text: "Correr a esconderse en los espesos arbustos espinosos.", nextId: 15 }, // Final 5
+                    { text: "Entrar en pánico y saltar de nuevo la verja hacia el callejón.", nextId: 14 } // Final 4
+                ]
+            },
+            // --- FINALES ---
+            11: {
+                title: "FINAL 1: El Sacrificio Heroico",
+                text: "<span class='ending-title'>El Sacrificio Heroico</span><br><br>Peleaste como un león. Eras más rápido y más inteligente, pero ellos eran demasiados. Los mantuviste a raya el tiempo suficiente para que Pelusa lograra trepar y desaparecer en la noche. Al día siguiente, Pelusa fue encontrada en un balcón por una familia amable que la adoptó. Creció a salvo, cálida y amada, pero cada vez que mira la lluvia por la ventana, ronronea recordando a Sombra, el hermano mayor que le dio la vida.",
+                choices: [{ text: "Jugar de nuevo", nextId: 1 }]
+            },
+            12: {
+                title: "FINAL 2: El Guardián del Tejado",
+                text: "<span class='ending-title ending-good'>El Guardián del Tejado</span><br><br>Haciendo acopio de toda tu fuerza, lograste subir a Pelusa. Ambos treparon hasta la parte más alta del tejado, lejos de las fauces de los perros. Arriba, la ciudad es diferente: silenciosa, inmensa y segura. Con el tiempo, aprendieron a cazar pájaros y a moverse entre las chimeneas. Se convirtieron en los guardianes de las alturas, dos sombras inseparables que observan el mundo desde donde los peligros no pueden alcanzarlos.",
+                choices: [{ text: "Jugar de nuevo", nextId: 1 }]
+            },
+            13: {
+                title: "FINAL 3: Reyes del Subterráneo",
+                text: "<span class='ending-title ending-neutral'>Reyes del Subterráneo</span><br><br>Te colaste por la rejilla de la alcantarilla con Pelusa cayendo justo detrás de ti. El agua estaba sucia y el olor era terrible, pero los ladridos se ahogaron en la superficie. No es la vida más glamurosa, pero el subterráneo está libre de perros y lleno de ratones. Se adaptaron a la oscuridad y, con el tiempo, ustedes dos se convirtieron en la leyenda del alcantarillado, gobernando las sombras por debajo de la ciudad.",
+                choices: [{ text: "Jugar de nuevo", nextId: 1 }]
+            },
+            14: {
+                title: "FINAL 4: Emboscada",
+                text: "<span class='ending-title'>Emboscada</span><br><br>El pánico nubló tu juicio. En tu desesperación por escapar, tomaste una ruta equivocada. Te viste acorralado en un callejón sin salida y, al darte la vuelta, la jauría bloqueaba el paso. Intentaste proteger a Pelusa hasta el final, pero la suerte se agotó en la oscuridad de la calle. El frío de la noche fue lo último que sintieron. La vida en la calle no siempre perdona los errores.",
+                choices: [{ text: "Intentarlo de nuevo", nextId: 1 }]
+            },
+            15: {
+                title: "FINAL 5: Refugio Inesperado",
+                text: "<span class='ending-title ending-good'>Refugio Inesperado</span><br><br>La puerta se abrió por completo y una anciana en bata salió con una linterna. Al ver a dos gatos empapados y temblorosos, no los echó. 'Oh, pobrecitos', murmuró con ternura. Entró y regresó con dos toallas tibias y un plato de atún. Esa noche, durmieron frente a una chimenea. Jamás volvieron a pisar un callejón, ni pasaron hambre ni miedo. Habían encontrado un hogar.",
+                choices: [{ text: "Jugar de nuevo", nextId: 1 }]
+            }
+        };
+
+        // --- LÓGICA DE LA INTERFAZ ---
+        const titleEl = document.getElementById('node-title');
+        const textEl = document.getElementById('story-text');
+        const choicesEl = document.getElementById('choices-box');
+
+        function loadNode(id) {
+            const node = storyData[id];
+            
+            // Actualizar textos
+            titleEl.innerHTML = node.title;
+            textEl.innerHTML = node.text;
+            
+            // Limpiar botones anteriores
+            choicesEl.innerHTML = '';
+            
+            // Crear nuevos botones
+            node.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.textContent = choice.text;
+                btn.onclick = () => loadNode(choice.nextId);
+                choicesEl.appendChild(btn);
+            });
+        }
+
+        // Iniciar el juego en el nodo 1
+        loadNode(1);
+    </script>
+</body>
+</html>
