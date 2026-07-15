@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Venganza de Parche</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Merriweather', serif;
+            background-color: #1a1a2e;
+            color: #e2e8f0;
+            line-height: 1.8;
+            transition: background-color 0.5s ease;
+        }
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+        }
+        .story-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #16213e;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #0f3460;
+        }
+        .text-content {
+            flex-grow: 1;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        .text-content p {
+            margin-bottom: 1.5rem;
+        }
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: auto;
+        }
+        .option-btn {
+            background-color: #0f3460;
+            color: #fff;
+            border: 2px solid #e94560;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-family: 'Merriweather', serif;
+        }
+        .option-btn:hover {
+            background-color: #e94560;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+        }
+        .title-screen {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .title-screen h1 {
+            font-size: 3.5rem;
+            color: #e94560;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .title-screen p {
+            font-size: 1.2rem;
+            color: #a0aec0;
+            margin-bottom: 3rem;
+            max-width: 600px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hidden {
+            display: none !important;
+        }
+        .ending-text {
+            color: #e94560;
+            font-weight: bold;
+            font-size: 1.3rem;
+            margin-top: 2rem;
+            text-align: center;
+        }
+        
+        /* Specific ending colors */
+        .ending-1 { background-color: #2d3748; } /* Trágico */
+        .ending-2 { background-color: #1a202c; } /* Oscuro */
+        .ending-3 { background-color: #276749; } /* Redención */
+        .ending-4 { background-color: #742a2a; } /* Venganza total */
+        .ending-5 { background-color: #2b6cb0; } /* Justicia legal */
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0f3460; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #e94560; 
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
+
+    <div id="game-container" class="story-container w-full">
+        <!-- Pantalla de Inicio -->
+        <div id="title-screen" class="title-screen">
+            <h1>La Venganza de Parche</h1>
+            <p>Una historia interactiva de lealtad, dolor y decisiones difíciles. Tú guiarás a los hermanos Leo y Maya en la búsqueda de justicia para su perro tuerto.</p>
+            <p class="text-sm text-gray-500 mb-8 italic">Tiempo estimado de lectura de una ruta completa: ~3-5 minutos.</p>
+            <button onclick="startGame()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-xl transition-all shadow-lg hover:shadow-red-500/50">
+                Comenzar Historia
+            </button>
+        </div>
+
+        <!-- Contenedor de la Historia -->
+        <div id="story-screen" class="hidden flex flex-col h-full">
+            <h2 id="chapter-title" class="text-2xl text-red-500 mb-4 border-b border-gray-700 pb-2">Capítulo 1</h2>
+            <div id="story-text" class="text-content overflow-y-auto pr-4">
+                <!-- El texto se inyectará aquí con JavaScript -->
+            </div>
+            <div id="options-area" class="options-container mt-6">
+                <!-- Los botones se inyectarán aquí con JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datos de la historia (Nodos)
+        const storyData = {
+            "inicio": {
+                title: "El Silencio del Patio",
+                text: `<p>El sol se ponía en el patio trasero. Leo (21) y Maya (19) observaban el montículo de tierra con una cruz de ramas. Allí descansaba Parche, su perro adoptado y tuerto.</p>
+                       <p>Esa mañana lo encontraron sin vida junto al alambrado del viejo Don Elías, con un trozo de carne envenenada al lado. </p>
+                       <p>—Fue él —dijo Maya con ira gélida—. Siempre odió que Parche ladrara.</p>
+                       <p>Leo apretó los puños. —¿Cómo procedemos, Maya? Parche era familia. No puede quedar así.</p>`,
+                choices: [
+                    { text: "Ir ahora mismo a confrontar a Don Elías cara a cara.", nextNode: "confrontacion_directa" },
+                    { text: "Entrar a su patio esta noche para buscar pruebas.", nextNode: "infiltracion_nocturna" }
+                ]
+            },
+            
+            "confrontacion_directa": {
+                title: "Cara a Cara",
+                text: `<p>Caminaron furiosos hasta la casa vecina y patearon la reja metálica.</p>
+                       <p>—¡Salí, cobarde! —gritó Maya. Don Elías abrió la puerta con una escopeta al hombro.</p>
+                       <p>—¿Qué quieren, mocosos? —gruñó.</p>
+                       <p>—Mataste a nuestro perro —soltó Leo. Elías rio secamente.</p>
+                       <p>—Esa bestia ruidosa se lo buscó. Una plaga menos.</p>
+                       <p>La cínica confesión fue como gasolina en el fuego para los hermanos.</p>`,
+                choices: [
+                    { text: "Leo no se contiene y trepa la reja para golpear al viejo.", nextNode: "ataque_impulsivo" },
+                    { text: "Maya detiene a Leo. Deciden irse y planear una venganza fría.", nextNode: "venganza_fria" }
+                ]
+            },
+
+            "ataque_impulsivo": {
+                title: "Sangre Caliente",
+                text: `<p>Cegado por la furia, Leo trepó los barrotes con agilidad.</p>
+                       <p>—¡Te voy a matar! —gritaba.</p>
+                       <p>Don Elías retrocedió y le apuntó con la escopeta. —¡Bájate de ahí o te vuelo los sesos! —advirtió.</p>
+                       <p>Maya suplicó a su hermano que se detuviera, pero la rabia de Leo era incontrolable.</p>`,
+                choices: [
+                    { text: "Leo ignora la advertencia y salta hacia el patio del viejo.", nextNode: "final_tragico" },
+                    { text: "Leo recapacita al ver el arma y baja de la reja, frustrado.", nextNode: "retirada_forzada" }
+                ]
+            },
+
+            "final_tragico": {
+                title: "Un Final Estruendoso",
+                text: `<p>Leo saltó. En ese instante, un estruendo rompió la noche.</p>
+                       <p>Elías apretó el gatillo y los perdigones derribaron a Leo. El grito desgarrador de Maya resonó en la calle vacía.</p>
+                       <p>Leo cayó malherido. El viejo iría preso, pero el precio pagado por la venganza impulsiva había destruido a la familia para siempre.</p>
+                       <p class="ending-text">FINAL 1: SANGRE POR SANGRE (Trágico)</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-1"
+            },
+
+            "retirada_forzada": {
+                title: "Tragarse el Orgullo",
+                text: `<p>El instinto de supervivencia ganó. Leo bajó temblando de rabia y ambos regresaron a casa.</p>
+                       <p>—Tenía un arma, nos habría matado —dijo Leo, asimilando el peligro.</p>
+                       <p>—Tenemos que ser más inteligentes —respondió Maya—. Vamos a destruirlo sin que pueda usar esa escopeta.</p>`,
+                choices: [
+                    { text: "Intentar resolverlo legalmente, buscando pruebas.", nextNode: "camino_legal" },
+                    { text: "Atacar lo que más quiere: su jardín de orquídeas y su auto.", nextNode: "destruccion_material" }
+                ]
+            },
+
+            "venganza_fria": {
+                title: "El Hielo del Rencor",
+                text: `<p>Maya agarró el brazo de Leo. —No caigas en su juego. Nos vamos.</p>
+                       <p>Pasaron semanas planeando en las sombras. Descubrieron que los viernes, Elías salía de madrugada al club y dejaba la casa sola.</p>
+                       <p>Llegó el día elegido, la casa estaba vacía y oscura. Era el momento de actuar.</p>`,
+                choices: [
+                    { text: "Robar todos sus objetos de valor y arruinar la casa.", nextNode: "robo_vengativo" },
+                    { text: "Plantar pruebas falsas para que la policía lo arreste.", nextNode: "incriminacion" }
+                ]
+            },
+
+            "infiltracion_nocturna": {
+                title: "En las Sombras",
+                text: `<p>A las tres de la mañana, cruzaron el muro en completo silencio. En el patio desordenado de Elías, Maya encendió una linterna.</p>
+                       <p>No hallaron el veneno, pero en un cobertizo cerrado descubrieron algo mucho peor: varios perros del vecindario en jaulas, desnutridos y asustados.</p>
+                       <p>Elías no solo odiaba a los perros, era un monstruo que los capturaba.</p>`,
+                choices: [
+                    { text: "Liberar a los perros y llamar a la policía ahora mismo.", nextNode: "rescate_policial" },
+                    { text: "Encerrarlo y prenderle fuego a la casa mientras liberan a los perros.", nextNode: "justicia_de_fuego" }
+                ]
+            },
+
+            "rescate_policial": {
+                title: "Justicia Verdadera",
+                text: `<p>Maya llamó a emergencias mientras Leo rompía los candados para liberar a los aterrorizados animales.</p>
+                       <p>La policía llegó rápido. Al ver el cobertizo de los horrores y el veneno, arrestaron a un desconcertado Elías en pijama.</p>
+                       <p>Fue condenado a años de prisión. Los hermanos adoptaron a uno de los perros rescatados, sintiendo que al fin habían honrado a Parche de la manera correcta.</p>
+                       <p class="ending-text">FINAL 5: JUSTICIA LEGAL (El Camino Recto)</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-5"
+            },
+
+            "justicia_de_fuego": {
+                title: "La Purga",
+                text: `<p>La idea de la policía parecía insuficiente. Ese monstruo merecía el infierno.</p>
+                       <p>Maya liberó a los perros y los sacó del patio, mientras Leo roció gasolina por todas las paredes de madera de la casa de Elías.</p>
+                       <p>Encendió un fósforo, listo para dejarlo caer y consumirlo todo.</p>`,
+                choices: [
+                    { text: "Ver arder la casa y escapar.", nextNode: "final_oscuro" },
+                    { text: "La consciencia ataca a Maya; corre a despertar al viejo.", nextNode: "redencion_tardia" }
+                ]
+            },
+
+            "final_oscuro": {
+                title: "Cenizas y Culpa",
+                text: `<p>El fuego devoró la casa en cuestión de minutos. Escucharon los gritos desesperados del viejo antes de que todo se silenciara por completo.</p>
+                       <p>Oficialmente fue catalogado como un "accidente". Leo y Maya salieron impunes, pero nunca volvieron a ser los mismos.</p>
+                       <p>Vengaron a Parche, pero sus propias almas se quemaron esa noche en el incendio.</p>
+                       <p class="ending-text">FINAL 2: DESCENSO A LA OSCURIDAD (Venganza Pura)</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-2"
+            },
+
+            "redencion_tardia": {
+                title: "Un Atisbo de Humanidad",
+                text: `<p>Maya sintió asco de sí misma. —¡No somos asesinos! —gritó, rompiendo una ventana para despertar a Elías.</p>
+                       <p>El viejo logró salir tosiendo justo cuando las llamas consumían el techo. La policía llegó y arrestó a todos.</p>
+                       <p>Pasaron poco tiempo en prisión gracias a que lo salvaron, y Elías pagó por su maltrato animal. Salieron con antecedentes, pero con la consciencia limpia de no haberse convertido en asesinos.</p>
+                       <p class="ending-text">FINAL 3: REDENCIÓN Y JUSTICIA COMPARTIDA</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-3"
+            },
+
+            "camino_legal": {
+                title: "La Lucha Larga",
+                text: `<p>Llevaron la carne envenenada como prueba a la policía. Fue un proceso frustrante, pero Maya juntó testimonios de vecinos y firmas.</p>
+                       <p>Presionaron tanto al municipio que la policía finalmente allanó la casa de Elías y halló el veneno escondido.</p>
+                       <p>Ante el repudio masivo del barrio y las multas, Elías vendió su casa y huyó arruinado. Fue una victoria pacífica que devolvió la paz a las calles.</p>
+                       <p class="ending-text">FINAL 5: JUSTICIA LEGAL (El Camino Recto)</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-5"
+            },
+
+            "destruccion_material": {
+                title: "Golpear donde Duele",
+                text: `<p>Se colaron en la propiedad. Maya destrozó las orquídeas premiadas del invernadero hasta hacerlas polvo.</p>
+                       <p>Mientras tanto, Leo destrozó los vidrios y la pintura del auto clásico del viejo con una barra de metal.</p>
+                       <p>A la mañana siguiente, los gritos de dolor de Elías despertaron a todos. Quedó arruinado financieramente reparando los daños. Parche había sido vengado con destrucción.</p>
+                       <p class="ending-text">FINAL 4: OJO POR OJO, JARDÍN POR PERRO</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-4"
+            },
+            
+            "robo_vengativo": {
+                title: "Dejándolo Seco",
+                text: `<p>Vaciaron su caja fuerte, robaron las joyas de su difunta esposa y arruinaron el interior de la casa cortando cables y dejando el agua correr.</p>
+                       <p>El impacto de ver su vida destrozada le causó un preinfarto a Elías. Nunca se recuperó.</p>
+                       <p>Terminó sus días en un asilo público, miserable. Los hermanos huyeron lejos con el dinero robado.</p>
+                       <p class="ending-text">FINAL 4: LA RUINA TOTAL (Venganza Material)</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-4"
+            },
+
+            "incriminacion": {
+                title: "La Trampa Perfecta",
+                text: `<p>Escondieron armas y medicamentos robados del mercado negro en la casa del viejo. Luego, Maya hizo una denuncia anónima a la policía.</p>
+                       <p>La redada fue brutal. Elías gritó su inocencia hasta quedarse sin voz, pero las pruebas falsas lo condenaron por robo a mano armada.</p>
+                       <p>Se pudriría en la cárcel rodeado de criminales peores que él. La venganza fue totalmente fría, absoluta e implacable.</p>
+                       <p class="ending-text">FINAL 2: DESCENSO A LA OSCURIDAD (Venganza Pura)</p>`,
+                choices: [
+                    { text: "Volver a jugar", nextNode: "inicio" }
+                ],
+                isEnding: true,
+                endingClass: "ending-2"
+            }
+        };
+
+        // Estado del juego
+        let currentNode = "inicio";
+
+        // Elementos del DOM
+        const titleScreen = document.getElementById('title-screen');
+        const storyScreen = document.getElementById('story-screen');
+        const chapterTitle = document.getElementById('chapter-title');
+        const storyText = document.getElementById('story-text');
+        const optionsArea = document.getElementById('options-area');
+
+        // Función para iniciar el juego
+        function startGame() {
+            titleScreen.classList.add('hidden');
+            storyScreen.classList.remove('hidden');
+            renderNode("inicio");
+        }
+
+        // Función para renderizar un nodo de la historia
+        function renderNode(nodeId) {
+            currentNode = nodeId;
+            const node = storyData[nodeId];
+
+            // Limpiar contenido anterior
+            storyText.innerHTML = '';
+            optionsArea.innerHTML = '';
+            document.body.className = "p-4 md:p-8 flex items-center justify-center min-h-screen"; // Reset background
+
+            // Actualizar título y texto
+            chapterTitle.textContent = node.title;
+            
+            // Efecto máquina de escribir simulado o simple fade in
+            storyText.innerHTML = node.text;
+            
+            // Aplicar estilo de final si es necesario
+            if (node.isEnding) {
+                document.body.classList.add(node.endingClass);
+            }
+
+            // Crear botones de opciones
+            node.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = choice.text;
+                btn.onclick = () => renderNode(choice.nextNode);
+                optionsArea.appendChild(btn);
+            });
+
+            // Scroll hacia arriba del texto
+            storyText.scrollTop = 0;
+        }
+    </script>
+</body>
+</html>
