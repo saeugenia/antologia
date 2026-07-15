@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antología Interactiva | Escuela Santa Eugenia</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Cinzel (Títulos) y Lora (Texto) para un toque gótico/literario -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        titulo: ['Cinzel', 'serif'],
+                        texto: ['Lora', 'serif'],
+                    },
+                    colors: {
+                        fantasia: {
+                            oscuro: '#0B0C10',
+                            fondo: '#1F2833',
+                            acento: '#C5A880', // Dorado envejecido
+                            sangre: '#8a0303',
+                            magia: '#6b21a8'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B0C10;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* Fondo animado Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        /* Estilos de las tarjetas mágicas */
+        .story-card {
+            background: rgba(31, 40, 51, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(197, 168, 128, 0.2);
+            transition: all 0.4s ease;
+        }
+
+        .story-card:hover {
+            transform: translateY(-5px);
+            border-color: #C5A880;
+            box-shadow: 0 0 20px rgba(197, 168, 128, 0.3), 0 0 40px rgba(138, 3, 3, 0.2);
+        }
+
+        .story-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, transparent, #C5A880, transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .story-card:hover::before {
+            opacity: 1;
+        }
+
+        /* Scrollbar gótico */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0C10;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F2833;
+            border: 1px solid #C5A880;
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #C5A880;
+        }
+
+        /* Insignias de género */
+        .badge-terror { background: linear-gradient(45deg, #450a0a, #8a0303); color: #fecaca; }
+        .badge-fantasia { background: linear-gradient(45deg, #1e1b4b, #4c1d95); color: #e9d5ff; }
+        .badge-misterio { background: linear-gradient(45deg, #022c22, #047857); color: #a7f3d0; }
+        .badge-cf { background: linear-gradient(45deg, #172554, #1d4ed8); color: #bfdbfe; }
+
+        .filtro-activo {
+            border-bottom: 2px solid #C5A880;
+            color: #C5A880;
+        }
+    </style>
+</head>
+<body class="font-texto antialiased min-h-screen relative flex flex-col">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Header / Hero Section -->
+    <header class="relative pt-24 pb-16 px-6 text-center z-10">
+        <div class="max-w-4xl mx-auto">
+            <div class="mb-4 inline-block">
+                <i class="fa-solid fa-book-skull text-4xl text-fantasia-acento animate-pulse-slow"></i>
+            </div>
+            <h1 class="font-titulo text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 tracking-wider drop-shadow-lg mb-2">
+                El Tomo de las Sombras
+            </h1>
+            <h2 class="font-titulo text-2xl md:text-3xl text-fantasia-acento mb-6 tracking-widest border-b border-fantasia-acento/30 pb-4 inline-block">
+                Antología Interactiva
+            </h2>
+            <p class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+                Adéntrate en los mundos creados por los estudiantes de la <strong class="text-white">Escuela Santa Eugenia de Chimbarongo</strong>. 
+                Elige tu propio destino, pero ten cuidado... no todas las historias tienen un final feliz.
+            </p>
+        </div>
+    </header>
+
+    <main class="flex-grow z-10 px-6 pb-24">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Filtros de Categoría -->
+            <div class="flex flex-wrap justify-center gap-4 md:gap-8 mb-12 font-titulo text-sm md:text-base" id="filtros-container">
+                <button class="filtro-btn filtro-activo pb-1 transition-colors hover:text-fantasia-acento uppercase tracking-wider" data-filter="todos">
+                    Todos los Relatos
+                </button>
+                <button class="filtro-btn text-gray-500 pb-1 transition-colors hover:text-fantasia-acento uppercase tracking-wider" data-filter="Terror">
+                    <i class="fa-solid fa-ghost mr-1"></i> Terror
+                </button>
+                <button class="filtro-btn text-gray-500 pb-1 transition-colors hover:text-fantasia-acento uppercase tracking-wider" data-filter="Fantasía">
+                    <i class="fa-solid fa-dragon mr-1"></i> Fantasía
+                </button>
+                <button class="filtro-btn text-gray-500 pb-1 transition-colors hover:text-fantasia-acento uppercase tracking-wider" data-filter="Misterio">
+                    <i class="fa-solid fa-magnifying-glass mr-1"></i> Misterio
+                </button>
+            </div>
+
+            <!-- Grid de Historias -->
+            <div id="historias-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 hidden">
+                <!-- Las tarjetas se inyectarán aquí vía JavaScript -->
+            </div>
+            
+            <!-- Estado de Carga -->
+            <div id="loading-state" class="text-center text-fantasia-acento py-12 flex flex-col items-center justify-center">
+                <i class="fa-solid fa-circle-notch fa-spin text-5xl mb-4"></i>
+                <p class="font-titulo text-xl tracking-widest animate-pulse mt-4">Consultando los archivos de la escuela...</p>
+            </div>
+
+            <!-- Mensaje cuando no hay resultados -->
+            <div id="no-results" class="hidden text-center text-gray-500 py-12">
+                <i class="fa-solid fa-spider text-4xl mb-4 opacity-50"></i>
+                <p class="font-titulo text-xl">Aún no hay historias en este repositorio.</p>
+                <p class="mt-2 text-sm">A medida que se suban los archivos HTML, aparecerán aquí automáticamente.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-800 bg-fantasia-oscuro/80 backdrop-blur-sm z-10 py-8 text-center text-sm text-gray-500 mt-auto">
+        <div class="max-w-4xl mx-auto px-6">
+            <p class="mb-2 font-titulo tracking-widest text-gray-400">Escuela Santa Eugenia - Chimbarongo</p>
+            <p>Proyecto de Creación de Historias Interactivas (HTML) &copy; <span id="year"></span></p>
+            <p class="mt-4 text-xs opacity-60 flex justify-center items-center gap-2">
+                <i class="fa-brands fa-github"></i> Hospedado en GitHub Pages
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        /**
+         * =====================================================================
+         * LÓGICA DE CARGA AUTOMÁTICA DESDE GITHUB
+         * =====================================================================
+         * La página detectará automáticamente los archivos .html que se suban 
+         * al mismo repositorio donde está alojado este archivo en GitHub Pages.
+         * 
+         * NOTA EDUCATIVA: Para que las tarjetas salgan con datos correctos,
+         * diles a tus alumnos que agreguen estas etiquetas dentro del <head> 
+         * de sus propios HTML:
+         * <title>El título del Cuento</title>
+         * <meta name="author" content="Nombre del Alumno">
+         * <meta name="genero" content="Fantasía o Terror">
+         * <meta name="description" content="Breve resumen de la historia">
+         */
+        
+        const configuracion = {
+            // Déjalo en blanco para que detecte automáticamente tu usuario y repo de GitHub Pages.
+            // (Nota: Si lo pruebas en tu PC sin subirlo, fallará la autodetección)
+            usuarioGitHub: "", 
+            repositorioGitHub: "",
+            // Si guardas los cuentos en una subcarpeta (ej: "historias"), pon su nombre. 
+            // Si los guardas sueltos junto a este archivo (index.html), déjalo vacío "".
+            carpeta: "" 
+        };
+
+        let historias = []; // Se llenará dinámicamente
+
+        const grid = document.getElementById('historias-grid');
+        const noResults = document.getElementById('no-results');
+        const loadingState = document.getElementById('loading-state');
+        const filtrosContainer = document.getElementById('filtros-container');
+
+        // Formatea el nombre del archivo si los alumnos no usaron etiqueta <title>
+        function formatearNombre(archivo) {
+            let nombre = archivo.replace('.html', '');
+            nombre = nombre.replace(/-/g, ' ').replace(/_/g, ' ');
+            return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+        }
+
+        // Obtener usuario y repo automáticamente leyendo la URL del navegador
+        function obtenerDatosRepositorio() {
+            let user = configuracion.usuarioGitHub;
+            let repo = configuracion.repositorioGitHub;
+
+            if (!user || !repo) {
+                const hostname = window.location.hostname;
+                const pathname = window.location.pathname;
+
+                if (hostname.includes('github.io')) {
+                    user = hostname.split('.')[0];
+                    const pathParts = pathname.split('/').filter(p => p.length > 0);
+                    repo = pathParts.length > 0 ? pathParts[0] : user + '.github.io';
+                }
+            }
+            return { user, repo };
+        }
+
+        async function cargarHistorias() {
+            const { user, repo } = obtenerDatosRepositorio();
+            
+            if (!user || !repo) {
+                mostrarError("No se detectó el repositorio automáticamente. Sube este archivo a GitHub Pages.");
+                return;
+            }
+
+            const path = configuracion.carpeta ? `/${configuracion.carpeta}` : '';
+            const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents${path}`;
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    if (response.status === 404) { // Repo vacío o carpeta inexistente
+                        finalizarCarga(false);
+                        return;
+                    }
+                    throw new Error("No se pudo acceder al repositorio de GitHub.");
+                }
+                
+                const archivos = await response.json();
+                
+                // Filtrar solo archivos HTML, excluyendo este mismo antologia-santa-eugenia.html / index.html
+                const archivosHtml = archivos.filter(file => 
+                    file.type === 'file' && 
+                    file.name.endsWith('.html') && 
+                    !file.name.includes('index.html') &&
+                    !file.name.includes('antologia')
+                );
+
+                if (archivosHtml.length === 0) {
+                    finalizarCarga(false);
+                    return;
+                }
+
+                const promesasHistorias = archivosHtml.map(async (file) => {
+                    let titulo = formatearNombre(file.name);
+                    let autor = "Estudiante Santa Eugenia";
+                    let genero = "Misterio"; // Valor por defecto
+                    let descripcion = "Una enigmática aventura interactiva te espera en este relato.";
+                    
+                    try {
+                        // El sistema lee el HTML del alumno para buscar las etiquetas <meta>
+                        const htmlResponse = await fetch(file.download_url);
+                        const htmlText = await htmlResponse.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlText, 'text/html');
+                        
+                        const metaTitle = doc.querySelector('title');
+                        if (metaTitle && metaTitle.innerText) titulo = metaTitle.innerText;
+                        
+                        const metaAuthor = doc.querySelector('meta[name="author"]');
+                        if (metaAuthor) autor = metaAuthor.content;
+                        
+                        const metaGenero = doc.querySelector('meta[name="genero"]');
+                        if (metaGenero) genero = metaGenero.content;
+
+                        const metaDesc = doc.querySelector('meta[name="description"]');
+                        if (metaDesc) descripcion = metaDesc.content;
+
+                    } catch (e) {
+                        console.warn("No se pudieron leer los detalles de: " + file.name);
+                    }
+
+                    // Asignar el icono visual según el género que haya puesto el estudiante
+                    let icono = "fa-book-skull";
+                    const genLower = genero.toLowerCase();
+                    if(genLower.includes('terror')) icono = "fa-ghost";
+                    if(genLower.includes('fantasía') || genLower.includes('fantasia')) icono = "fa-dragon";
+                    if(genLower.includes('ciencia') || genLower.includes('ficción') || genLower.includes('ficcion')) icono = "fa-user-astronaut";
+
+                    const urlFinal = configuracion.carpeta ? `${configuracion.carpeta}/${file.name}` : file.name;
+
+                    return { titulo, autor, genero, descripcion, url: urlFinal, icono };
+                });
+
+                historias = await Promise.all(promesasHistorias);
+                finalizarCarga(true);
+
+            } catch (error) {
+                console.error(error);
+                mostrarError("Ocurrió un error al invocar los relatos: " + error.message);
+            }
+        }
+
+        function finalizarCarga(hayResultados) {
+            loadingState.classList.add('hidden');
+            if (hayResultados) {
+                renderizarHistorias();
+            } else {
+                noResults.classList.remove('hidden');
+                filtrosContainer.classList.add('hidden');
+            }
+        }
+
+        function mostrarError(mensaje) {
+            loadingState.classList.add('hidden');
+            noResults.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-4xl mb-4 text-fantasia-sangre"></i><p class="font-titulo text-xl">${mensaje}</p>`;
+            noResults.classList.remove('hidden');
+            filtrosContainer.classList.add('hidden');
+        }
+
+        function obtenerClaseGenero(genero) {
+            switch(genero.toLowerCase()) {
+                case 'terror': return 'badge-terror';
+                case 'fantasía': return 'badge-fantasia';
+                case 'misterio': return 'badge-misterio';
+                case 'ciencia ficción': return 'badge-cf';
+                default: return 'bg-gray-700 text-gray-200';
+            }
+        }
+
+        function renderizarHistorias(filtro = 'todos') {
+            grid.innerHTML = '';
+            
+            const historiasFiltradas = historias.filter(historia => 
+                filtro === 'todos' || historia.genero.toLowerCase().includes(filtro.toLowerCase())
+            );
+
+            if (historiasFiltradas.length === 0 && historias.length > 0) {
+                grid.classList.add('hidden');
+                noResults.innerHTML = `<i class="fa-solid fa-ghost text-4xl mb-4 opacity-50"></i><p class="font-titulo text-xl">No hay relatos de esta categoría.</p>`;
+                noResults.classList.remove('hidden');
+                return;
+            } else if (historias.length > 0) {
+                grid.classList.remove('hidden');
+                noResults.classList.add('hidden');
+            }
+
+            historiasFiltradas.forEach((historia, index) => {
+                const card = document.createElement('div');
+                card.className = 'story-card rounded-xl p-6 relative overflow-hidden flex flex-col h-full group opacity-0';
+                card.style.animation = `fadeInUp 0.6s ease forwards ${index * 0.1}s`;
+                
+                card.innerHTML = `
+                    <div class="absolute -right-4 -top-4 opacity-10 transform group-hover:scale-110 transition-transform duration-700">
+                        <i class="fa-solid ${historia.icono} text-9xl text-fantasia-acento"></i>
+                    </div>
+                    
+                    <div class="flex justify-between items-start mb-4 relative z-10">
+                        <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md ${obtenerClaseGenero(historia.genero)}">
+                            ${historia.genero}
+                        </span>
+                        <div class="text-fantasia-acento border border-fantasia-acento/30 rounded-full w-8 h-8 flex items-center justify-center">
+                            <i class="fa-solid fa-scroll text-sm"></i>
+                        </div>
+                    </div>
+                    
+                    <h3 class="font-titulo text-2xl font-bold mb-2 text-white group-hover:text-fantasia-acento transition-colors relative z-10">
+                        ${historia.titulo}
+                    </h3>
+                    
+                    <p class="text-sm text-gray-400 mb-4 italic relative z-10">
+                        Por: <span class="text-gray-300 font-semibold">${historia.autor}</span>
+                    </p>
+                    
+                    <p class="text-gray-400 text-sm leading-relaxed mb-8 flex-grow relative z-10">
+                        ${historia.descripcion}
+                    </p>
+                    
+                    <a href="${historia.url}" target="_blank" rel="noopener noreferrer" 
+                       class="mt-auto block w-full text-center bg-transparent border-2 border-fantasia-acento text-fantasia-acento font-titulo font-bold py-3 px-4 rounded-lg hover:bg-fantasia-acento hover:text-black transition-all duration-300 relative z-10 uppercase tracking-widest text-sm">
+                        <i class="fa-solid fa-book-open-reader mr-2"></i> Leer Relato
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Event Listeners para los filtros
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filtro-btn').forEach(b => {
+                    b.classList.remove('filtro-activo');
+                    b.classList.add('text-gray-500');
+                });
+                
+                const target = e.currentTarget;
+                target.classList.add('filtro-activo');
+                target.classList.remove('text-gray-500');
+                
+                renderizarHistorias(target.dataset.filter);
+            });
+        });
+
+        // Iniciar la carga automática al arrancar
+        cargarHistorias();
+
+        // Agregar animación de entrada CSS dinámicamente
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes fadeInUp {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+
+        /**
+         * LÓGICA DEL CANVAS DE FONDO (Efecto de brasas/cenizas mágicas)
+         */
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particlesArray = [];
+        
+        function setupCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        window.addEventListener('resize', () => {
+            setupCanvas();
+            initParticles(); // Re-inicializar partículas en resize
+        });
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2.5 + 0.5; // Tamaño pequeño
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * -1.5 - 0.5; // Flotan hacia arriba
+                this.color = Math.random() > 0.5 ? '#C5A880' : '#8a0303'; // Dorado o Rojo oscuro
+                this.opacity = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                // Efecto de parpadeo
+                if(Math.random() < 0.01) {
+                    this.opacity = Math.random() * 0.8 + 0.2;
+                }
+
+                // Resetear si salen de la pantalla
+                if (this.y < 0) {
+                    this.y = canvas.height;
+                    this.x = Math.random() * canvas.width;
+                }
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.color === '#C5A880' ? '197, 168, 128' : '138, 3, 3'}, ${this.opacity})`;
+                ctx.fill();
+                
+                // Pequeño resplandor
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+            }
+        }
+
+        function initParticles() {
+            particlesArray = [];
+            const numberOfParticles = (canvas.width * canvas.height) / 9000; // Densidad adaptable
+            for (let i = 0; i < numberOfParticles; i++) {
+                particlesArray.push(new Particle());
+            }
+        }
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            requestAnimationFrame(animateCanvas);
+        }
+
+        // Iniciar canvas una vez que cargue la ventana
+        window.onload = function() {
+            setupCanvas();
+            initParticles();
+            animateCanvas();
+        };
+
+    </script>
+</body>
+</html>
