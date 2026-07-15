@@ -177,10 +177,33 @@
         </div>
     </main>
 
+    <!-- Modal para leer la historia -->
+    <div id="historia-modal" class="fixed inset-0 z-50 hidden bg-black/95 backdrop-blur-md flex items-center justify-center p-2 md:p-6 opacity-0 transition-opacity duration-300">
+        <div class="bg-[#0B0C10] w-full max-w-6xl h-full max-h-[95vh] rounded-xl border border-fantasia-acento/50 shadow-[0_0_40px_rgba(197,168,128,0.15)] flex flex-col relative overflow-hidden transform scale-95 transition-transform duration-300" id="historia-modal-content">
+            
+            <!-- Header del Modal -->
+            <div class="flex justify-between items-center p-4 border-b border-fantasia-acento/20 bg-[#1F2833]">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <i class="fa-solid fa-book-skull text-fantasia-acento text-xl"></i>
+                    <h3 id="modal-titulo" class="font-titulo text-lg md:text-xl text-gray-200 font-bold truncate">Título</h3>
+                </div>
+                <button onclick="cerrarHistoria()" class="text-gray-400 hover:text-fantasia-sangre transition-colors text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/50 ml-4 flex-shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <!-- Contenedor del Iframe -->
+            <div class="flex-grow w-full relative bg-white">
+                <!-- Se usa un fondo blanco por defecto para los canvas en caso de que los estudiantes no le hayan puesto fondo a su HTML -->
+                <iframe id="modal-iframe" class="w-full h-full border-none absolute inset-0 bg-white" src=""></iframe>
+            </div>
+        </div>
+    </div>
+
     <footer class="border-t border-gray-800 bg-fantasia-oscuro/80 backdrop-blur-sm z-10 py-8 text-center text-sm text-gray-500 mt-auto">
         <div class="max-w-4xl mx-auto px-6">
             <p class="mb-2 font-titulo tracking-widest text-gray-400">Escuela Santa Eugenia - Chimbarongo</p>
-            <p>Proyecto de Creación de Historias Interactivas - Taller de computación &copy; <span id="year"></span></p>
+            <p>Proyecto de Creación de Historias Interactivas (HTML) &copy; <span id="year"></span></p>
             <p class="mt-4 text-xs opacity-60 flex justify-center items-center gap-2">
                 <i class="fa-brands fa-github"></i> Hospedado en GitHub Pages
             </p>
@@ -294,6 +317,20 @@
                         // El sistema lee el HTML del alumno para buscar las etiquetas <meta>
                         const htmlResponse = await fetch(file.download_url);
                         const htmlText = await htmlResponse.text();
+                        
+                        const lineas = htmlText.split('\n');
+                        let primeraLinea = lineas.length > 0 ? lineas[0].trim() : '';
+                        
+                        // Limpiar comentarios HTML (<!-- -->) si los estudiantes lo usaron de esa forma
+                        primeraLinea = primeraLinea.replace(/^<!--+/, '').replace(/--+>$/, '').trim();
+                        // Limpiar prefijos comunes si los usaron (ej: "Autores: Juan y Pedro" -> "Juan y Pedro")
+                        primeraLinea = primeraLinea.replace(/^(Autor|Autores|Creado por|Estudiantes|Nombre):\s*/i, '').trim();
+
+                        // Validar que la primera línea tenga texto y NO sea código estructural (como <!DOCTYPE o <html>)
+                        if (primeraLinea && !primeraLinea.toLowerCase().startsWith('<!doctype') && !primeraLinea.toLowerCase().startsWith('<html')) {
+                            autor = primeraLinea;
+                        }
+
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(htmlText, 'text/html');
                         
@@ -409,13 +446,50 @@
                         ${historia.descripcion}
                     </p>
                     
-                    <a href="${historia.url}" target="_blank" rel="noopener noreferrer" 
-                       class="mt-auto block w-full text-center bg-transparent border-2 border-fantasia-acento text-fantasia-acento font-titulo font-bold py-3 px-4 rounded-lg hover:bg-fantasia-acento hover:text-black transition-all duration-300 relative z-10 uppercase tracking-widest text-sm">
-                        <i class="fa-solid fa-book-open-reader mr-2"></i> Leer Relato
-                    </a>
+                    <button onclick="abrirHistoria('${historia.url}', '${historia.titulo.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')" 
+                       class="mt-auto block w-full text-center bg-transparent border-2 border-fantasia-acento text-fantasia-acento font-titulo font-bold py-3 px-4 rounded-lg hover:bg-fantasia-acento hover:text-black transition-all duration-300 relative z-10 uppercase tracking-widest text-sm cursor-pointer group-hover:shadow-[0_0_15px_rgba(197,168,128,0.4)]">
+                        <i class="fa-solid fa-book-open-reader mr-2"></i> Jugar Relato
+                    </button>
                 `;
                 grid.appendChild(card);
             });
+        }
+
+        function abrirHistoria(url, titulo) {
+            const modal = document.getElementById('historia-modal');
+            const modalContent = document.getElementById('historia-modal-content');
+            const iframe = document.getElementById('modal-iframe');
+            const modalTitulo = document.getElementById('modal-titulo');
+
+            modalTitulo.textContent = titulo;
+            iframe.src = url; // Carga el HTML del estudiante
+            
+            modal.classList.remove('hidden');
+            
+            // Pequeño retardo para permitir que el CSS aplique la transición suave de opacidad y escala
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+            
+            // Previene que la web de fondo siga haciendo scroll mientras se juega
+            document.body.style.overflow = 'hidden'; 
+        }
+
+        function cerrarHistoria() {
+            const modal = document.getElementById('historia-modal');
+            const modalContent = document.getElementById('historia-modal-content');
+            const iframe = document.getElementById('modal-iframe');
+
+            modal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            
+            // Espera a que termine la animación antes de ocultarlo completamente y limpiar el iframe
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                iframe.src = ''; // Limpia el iframe (esto detiene cualquier audio/video que estuviera sonando)
+                document.body.style.overflow = ''; // Restaura el scroll
+            }, 300);
         }
 
         // Event Listeners para los filtros
