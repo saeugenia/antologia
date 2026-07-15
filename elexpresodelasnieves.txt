@@ -1,0 +1,379 @@
+Fabiana - Maite
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dominga y Osa: El Expreso de las Nieves</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts para un estilo de libro moderno y elegante -->
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+        
+        /* Fuente serif para la narrativa del cuento */
+        .story-text {
+            font-family: 'Lora', serif;
+        }
+
+        /* Animaciones de transición */
+        .page-transition {
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .page-hidden {
+            opacity: 0;
+            transform: translateY(15px);
+            pointer-events: none;
+        }
+        .page-visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* Estilo Canva: Tarjeta principal con sombras y bordes suaves */
+        .story-card {
+            background: linear-gradient(135deg, #1a202c 0%, #111827 100%);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Arte decorativo */
+        .cover-art {
+            font-size: 6rem;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            animation: breathe 4s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Temas dinámicos de las páginas (Tonos fríos y de nieve) */
+        .bg-theme-neutral { background: radial-gradient(circle at top right, #1e293b, #0f172a); }
+        .bg-theme-danger { background: radial-gradient(circle at top right, #450a0a, #0f172a); }
+        .bg-theme-success { background: radial-gradient(circle at top right, #064e3b, #0f172a); }
+        .bg-theme-sad { background: radial-gradient(circle at top right, #172554, #0f172a); }
+        .bg-theme-gold { background: radial-gradient(circle at top right, #422006, #0f172a); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 bg-theme-neutral transition-colors duration-700" id="app-body">
+
+    <!-- Contenedor Principal (Tarjeta de Historia) -->
+    <div class="story-card w-full max-w-5xl flex flex-col md:flex-row min-h-[650px] z-10">
+        
+        <!-- Indicador de Final (Oculto por defecto) -->
+        <div id="ending-badge" class="hidden absolute top-6 left-6 md:left-auto md:right-6 bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-full uppercase tracking-widest z-20 shadow-lg">
+            Final Alcanzado
+        </div>
+
+        <!-- Columna Izquierda: Visual/Arte -->
+        <div id="visual-panel" class="w-full md:w-2/5 bg-slate-900 flex flex-col items-center justify-center p-10 border-b md:border-b-0 md:border-r border-slate-800 transition-colors duration-700 relative overflow-hidden">
+            <!-- Capa de ruido/textura visual de nieve -->
+            <div class="absolute inset-0 opacity-20" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');"></div>
+            
+            <div id="scene-icon" class="cover-art z-10">🚂</div>
+            <div class="z-10 mt-8 text-center">
+                <span id="scene-chapter" class="text-slate-400 text-xs tracking-[0.2em] uppercase font-bold">Capítulo I</span>
+                <div class="h-1 w-12 bg-slate-600 mx-auto mt-3 rounded-full"></div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Narrativa y Controles -->
+        <div class="w-full md:w-3/5 p-8 md:p-14 flex flex-col justify-between bg-opacity-50">
+            
+            <!-- Contenido del Cuento -->
+            <div id="story-content" class="page-transition page-visible">
+                <h1 id="scene-title" class="text-3xl md:text-4xl font-bold mb-6 text-slate-100 leading-tight">
+                    Dominga y Osa: El Expreso de las Nieves
+                </h1>
+                <p id="scene-text" class="story-text text-slate-300 text-lg md:text-xl leading-relaxed mb-8">
+                    Cargando el cuento...
+                </p>
+            </div>
+
+            <!-- Botones de Decisión (Interactividad) -->
+            <div id="choices-area" class="flex flex-col gap-4 mt-auto page-transition page-visible">
+                <!-- Se inyectan con JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // La estructura de datos del cuento
+        const storyTale = {
+            inicio: {
+                chapter: "Prólogo",
+                title: "La Estación Olvidada",
+                text: "Eres Dominga. La tormenta de nieve arrecia en las montañas, congelando tus pestañas. Oculta bajo tu grueso abrigo, la pequeña Osa, tu perrita bebé, tiembla y suelta un suave quejido. Frente a ustedes está la Estación 'Pico Blanco'. En los andenes, una vieja locomotora de vapor es su única vía de escape. Sin embargo, a través de la ventisca, escuchas el crujir de huesos y gruñidos arrastrados. Los zombis de las tumbas están cerca.",
+                icon: "🏔️",
+                theme: "bg-theme-neutral",
+                panelColor: "bg-slate-900",
+                choices: [
+                    { text: "Buscar la llave de la locomotora en la oscura oficina del Jefe de Estación.", next: "oficina" },
+                    { text: "Buscar carbón en los vagones de carga abandonados.", next: "vagones" }
+                ]
+            },
+            oficina: {
+                chapter: "Capítulo II",
+                title: "Silencio Roto",
+                text: "Fuerzas la puerta de la oficina. En el escritorio polvoriento encuentras la gran llave de bronce del tren. Osa asoma su hociquito y olfatea alegremente. Pero de pronto, el cristal de la ventana se hace añicos. Tres zombis de las tumbas, con sus cuerpos cubiertos de escarcha, se abalanzan hacia el interior.",
+                icon: "🗝️",
+                theme: "bg-theme-neutral",
+                panelColor: "bg-blue-950",
+                choices: [
+                    { text: "Esconderte con Osa en la vieja caja fuerte de acero.", next: "caja_fuerte" },
+                    { text: "Saltar por otra ventana y huir hacia el bosque nevado.", next: "escape_bosque" }
+                ]
+            },
+            vagones: {
+                chapter: "Capítulo II",
+                title: "Sombras en el Hielo",
+                text: "Caminas sigilosamente entre los vagones de carga buscando carbón. Logras llenar un saco pesado. Cuando te giras para salir, pisas una tabla podrida. El crujido despierta a un enorme zombi de las tumbas que dormía bajo una lona. Bloquea la única salida del vagón.",
+                icon: "🧊",
+                theme: "bg-theme-danger",
+                panelColor: "bg-red-950",
+                choices: [
+                    { text: "Pelear contra el monstruo usando una barra de hierro vieja.", next: "pelea_vagon" },
+                    { text: "Intentar derribar unas cajas pesadas para aplastarlo.", next: "muerte_vagon" }
+                ]
+            },
+            
+            // FINAL 1: El Zombi (Final Malo)
+            muerte_vagon: {
+                chapter: "Epílogo",
+                title: "Sangre Fría",
+                text: "Empujas las cajas, pero el zombi de las tumbas es demasiado fuerte. Las aparta de un golpe y te derriba. Sientes un dolor agudo en el cuello. Osa logra escurrirse por un hueco en la madera y huye a la tormenta. Tú quedas tumbada en el suelo congelado. Tu piel pierde calor, pero el hambre de carne fresca apenas comienza a despertar en ti.",
+                icon: "💀",
+                theme: "bg-theme-danger",
+                panelColor: "bg-red-900",
+                isEnding: true,
+                endingType: "Final 1/5: Enterrada en la Nieve",
+                choices: [
+                    { text: "Leer el cuento de nuevo", next: "inicio" }
+                ]
+            },
+            
+            caja_fuerte: {
+                chapter: "Capítulo III",
+                title: "Respiración Contenida",
+                text: "Te encierras en la caja fuerte y abrazas a Osa para evitar que sus ladridos de miedo resuenen. A través de una rendija, ves a los zombis de las tumbas merodeando, buscando su presa. Tras varias horas, el silencio regresa. Sales empuñando la llave y corres por el andén helado hacia la locomotora.",
+                icon: "🤫",
+                theme: "bg-theme-neutral",
+                panelColor: "bg-slate-800",
+                choices: [
+                    { text: "Subir a la cabina del tren para encender el motor.", next: "locomotora_limpia" }
+                ]
+            },
+
+            // FINAL 2: El Cobarde (Final Neutral)
+            escape_bosque: {
+                chapter: "Epílogo",
+                title: "Perdidas en la Tormenta",
+                text: "Saltas por la ventana trasera, abandonas la llave y corres con Osa perdiéndote en la espesura del bosque. Los zombis de las tumbas quedan atrás, pero el tren también. Logras encontrar una pequeña cabaña abandonada donde refugiarse de la nevada. Sobreviviste, pero están atrapadas en la montaña indefinidamente.",
+                icon: "🌲",
+                theme: "bg-theme-sad",
+                panelColor: "bg-cyan-950",
+                isEnding: true,
+                endingType: "Final 2/5: La Huida al Bosque",
+                choices: [
+                    { text: "Leer el cuento de nuevo", next: "inicio" }
+                ]
+            },
+
+            pelea_vagon: {
+                chapter: "Capítulo III",
+                title: "Marcada",
+                text: "Golpeas con furia usando la barra de hierro. Osa te anima con pequeños ladridos. Logras destrozar la cabeza del zombi de las tumbas, pero en su último espasmo, te muerde la pierna. Sabes que el veneno recorrerá tus venas en cuestión de horas. Tomas el saco de carbón, cojeas hacia la locomotora y subes a la cabina.",
+                icon: "🩸",
+                theme: "bg-theme-danger",
+                panelColor: "bg-red-950",
+                choices: [
+                    { text: "Encender las calderas de la locomotora.", next: "locomotora_infectada" }
+                ]
+            },
+
+            locomotora_limpia: {
+                chapter: "El Clímax",
+                title: "Vapor y Fuego",
+                text: "Insertas la llave y enciendes el caldero. El tren pita con un ruido ensordecedor que atrae a una horda masiva de cientos de zombis de las tumbas. Empiezan a trepar por los lados del tren. Te das cuenta de que si escapas, la horda seguirá las vías hasta llegar a la aldea de supervivientes en el valle.",
+                icon: "🔥",
+                theme: "bg-theme-success",
+                panelColor: "bg-emerald-950",
+                choices: [
+                    { text: "Acelerar a fondo y romper el bloqueo con la fuerza del tren.", next: "final_heroe" },
+                    { text: "Atascar la presión de la caldera para causar una explosión masiva.", next: "final_explosion" }
+                ]
+            },
+
+            // FINAL 3: El Héroe (Final Bueno)
+            final_heroe: {
+                chapter: "Epílogo",
+                title: "El Amanecer en el Valle",
+                text: "Tiras de la palanca al máximo. Las ruedas rechinan chispas sobre el hielo y la locomotora embiste a los zombis de las tumbas, lanzándolos por los aires. Osa aúlla emocionada desde tu regazo. Dejan atrás la tormenta y entran al valle iluminado por el sol matutino. Llegaron a salvo. Dominga y Osa son libres.",
+                icon: "🚂",
+                theme: "bg-theme-gold",
+                panelColor: "bg-yellow-900",
+                isEnding: true,
+                endingType: "Final 3/5: Las Pasajeras",
+                choices: [
+                    { text: "Leer el cuento de nuevo", next: "inicio" }
+                ]
+            },
+
+            // FINAL 4: El Sacrificio (Final Épico)
+            final_explosion: {
+                chapter: "Epílogo",
+                title: "Fuego en la Nieve",
+                text: "Para proteger la aldea, atascas las válvulas. Pones a Osa en un carrito de servicio de las vías y la empujas cuesta abajo hacia el valle a salvo. Te quedas en la cabina viendo acercarse a la horda. La caldera no soporta más y la locomotora estalla en una llamarada que borra a los monstruos de la faz de la montaña. Dominga cayó, pero su leyenda recién comienza.",
+                icon: "💥",
+                theme: "bg-theme-danger",
+                panelColor: "bg-orange-950",
+                isEnding: true,
+                endingType: "Final 4/5: El Cortafuegos",
+                choices: [
+                    { text: "Leer el cuento de nuevo", next: "inicio" }
+                ]
+            },
+
+            locomotora_infectada: {
+                chapter: "El Clímax",
+                title: "Tiempo Agotado",
+                text: "Echas carbón y el motor cobra vida, pero tu vista se oscurece y tus venas laten con un líquido negro. Osa llora lamiendo tus manos heladas. La horda de zombis de las tumbas comienza a romper los cristales de la cabina. No te queda tiempo, la transformación es inminente.",
+                icon: "⏳",
+                theme: "bg-theme-danger",
+                panelColor: "bg-purple-950",
+                choices: [
+                    { text: "Atar el acelerador, poner a Osa a salvo en la cabina y saltar para detener a la horda.", next: "final_promesa" }
+                ]
+            },
+
+            // FINAL 5: La Promesa (Final Agridulce)
+            final_promesa: {
+                chapter: "Epílogo",
+                title: "Viaje Sin Retorno",
+                text: "Aseguras la palanca a máxima velocidad y cierras con pestillo la cabina blindada, dejando a la pequeña Osa segura en su interior. Tú saltas al andén con tu barra de hierro frente a la horda, bloqueándoles el paso. Ves cómo el tren desaparece entre la nieve llevándose a tu perrita a la salvación. Luego, te entregas a la oscuridad.",
+                icon: "🛡️",
+                theme: "bg-theme-sad",
+                panelColor: "bg-indigo-950",
+                isEnding: true,
+                endingType: "Final 5/5: El Último Boleto",
+                choices: [
+                    { text: "Leer el cuento de nuevo", next: "inicio" }
+                ]
+            }
+        };
+
+        // Variables de estado
+        let currentNode = 'inicio';
+
+        // Elementos del DOM
+        const titleEl = document.getElementById('scene-title');
+        const textEl = document.getElementById('scene-text');
+        const choicesArea = document.getElementById('choices-area');
+        const iconEl = document.getElementById('scene-icon');
+        const chapterEl = document.getElementById('scene-chapter');
+        const storyContent = document.getElementById('story-content');
+        const appBody = document.getElementById('app-body');
+        const visualPanel = document.getElementById('visual-panel');
+        const endingBadge = document.getElementById('ending-badge');
+
+        function renderScene(nodeId) {
+            const scene = storyTale[nodeId];
+            if (!scene) return;
+
+            // Actualizar contenido textual
+            titleEl.textContent = scene.title;
+            textEl.textContent = scene.text;
+            iconEl.textContent = scene.icon;
+            chapterEl.textContent = scene.chapter;
+
+            // Actualizar paleta de colores global y del panel
+            appBody.className = `min-h-screen flex items-center justify-center p-4 transition-colors duration-1000 ${scene.theme}`;
+            visualPanel.className = `w-full md:w-2/5 flex flex-col items-center justify-center p-10 border-b md:border-b-0 md:border-r border-slate-800 transition-colors duration-700 relative overflow-hidden ${scene.panelColor}`;
+
+            // Manejo de finales
+            if (scene.isEnding) {
+                endingBadge.classList.remove('hidden');
+                endingBadge.textContent = scene.endingType;
+                
+                // Efecto visual para finales
+                titleEl.classList.remove('text-slate-100');
+                titleEl.classList.add('text-white');
+            } else {
+                endingBadge.classList.add('hidden');
+                titleEl.classList.add('text-slate-100');
+                titleEl.classList.remove('text-white');
+            }
+
+            // Generar botones de decisión
+            choicesArea.innerHTML = '';
+
+            scene.choices.forEach((choice, index) => {
+                const button = document.createElement('button');
+                
+                // Clases de Tailwind para un botón interactivo
+                button.className = "group w-full text-left bg-slate-800/80 hover:bg-slate-100 hover:text-slate-900 text-slate-200 border border-slate-700 rounded-xl px-6 py-4 font-medium transition-all duration-300 shadow-md hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-between";
+                
+                // Estructura interna del botón
+                button.innerHTML = `
+                    <span class="pr-4">${choice.text}</span>
+                    <div class="bg-slate-700 group-hover:bg-slate-300 p-2 rounded-full transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-300 group-hover:text-slate-900 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </div>
+                `;
+
+                // Agregar delay a la aparición de los botones
+                button.style.animationDelay = `${index * 0.1}s`;
+
+                button.onclick = () => handleChoice(choice.next);
+                choicesArea.appendChild(button);
+            });
+        }
+
+        function handleChoice(nextNodeId) {
+            // Iniciar animación de salida (fade out)
+            storyContent.classList.remove('page-visible');
+            storyContent.classList.add('page-hidden');
+            choicesArea.classList.remove('page-visible');
+            choicesArea.classList.add('page-hidden');
+            iconEl.style.transform = 'scale(0.5)';
+            iconEl.style.opacity = '0';
+            iconEl.style.transition = 'all 0.4s ease';
+
+            // Esperar a que termine la animación antes de cambiar el contenido
+            setTimeout(() => {
+                currentNode = nextNodeId;
+                renderScene(currentNode);
+                
+                // Iniciar animación de entrada (fade in)
+                storyContent.classList.remove('page-hidden');
+                storyContent.classList.add('page-visible');
+                choicesArea.classList.remove('page-hidden');
+                choicesArea.classList.add('page-visible');
+                iconEl.style.transform = 'scale(1)';
+                iconEl.style.opacity = '1';
+            }, 500); // 500ms coincide con la transición CSS
+        }
+
+        // Inicializar la aplicación al cargar
+        window.onload = () => {
+            renderScene(currentNode);
+        };
+    </script>
+</body>
+</html>
