@@ -1,0 +1,515 @@
+Ignacia Gonzales
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Casa Embrujada - Historia Interactiva</title>
+    <!-- Usando Tailwind CSS para estilos rápidos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos personalizados adicionales */
+        body {
+            background-color: #1a1a1a; /* Fondo oscuro */
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace; /* Fuente estilo máquina de escribir/misterio */
+            margin: 0;
+            overflow: hidden; /* Evitar scrollbar */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            background-color: #000;
+            border: 2px solid #555;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            flex-grow: 1; /* Ocupar el espacio disponible */
+            /* El canvas se usará principalmente para efectos visuales o dibujar texto, 
+               pero para una interfaz de historia interactiva con botones, 
+               HTML/DOM es más accesible y manejable. 
+               Usaremos una combinación: Canvas para fondo atmosférico y DOM para UI */
+        }
+        
+        /* Contenedor de la UI superpuesto al canvas */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            pointer-events: none; /* Dejar pasar clics al canvas si fuera necesario, pero los botones tendrán pointer-events: auto */
+        }
+
+        #story-text-container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            min-height: 150px;
+            pointer-events: auto; /* Permitir selección de texto si se desea */
+        }
+
+        #story-text {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            text-shadow: 1px 1px 2px black;
+            /* Efecto de aparición de texto (opcional, lo haremos en JS) */
+        }
+
+        #choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+            pointer-events: auto; /* Crucial para que los botones sean clickeables */
+        }
+
+        .choice-btn {
+            background: linear-gradient(to bottom, #3a3a3a, #1f1f1f);
+            color: #d0d0d0;
+            border: 1px solid #555;
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            font-family: inherit;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .choice-btn:hover {
+            background: linear-gradient(to bottom, #505050, #333);
+            border-color: #777;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.7);
+        }
+        
+        .choice-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Título del juego */
+        #game-title {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 1.5rem;
+            color: #777;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="game-title">La Casa Embrujada</div>
+    <div id="game-container">
+        <!-- Canvas para fondo animado atmosférico -->
+        <canvas id="bg-canvas"></canvas>
+        
+        <!-- Capa de Interfaz de Usuario (UI) -->
+        <div id="ui-layer">
+            <div id="story-text-container">
+                <div id="story-text"></div>
+            </div>
+            
+            <div id="choices-container">
+                <!-- Los botones se generarán dinámicamente aquí -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURACIÓN DEL CANVAS (Fondo Atmosférico) ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Clase para las partículas (polvo/niebla en el aire)
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = Math.random() * 0.5 - 0.25;
+                this.speedY = Math.random() * -0.5 - 0.1; // Suben lentamente
+                this.opacity = Math.random() * 0.5 + 0.1;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // Reaparecer abajo si salen por arriba
+                if (this.y < 0) {
+                    this.y = canvas.height;
+                    this.x = Math.random() * canvas.width;
+                }
+                // Limites laterales
+                if (this.x > canvas.width || this.x < 0) {
+                    this.speedX *= -1;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(150, 150, 150, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        let animationId;
+        function animateCanvas() {
+            // Fondo oscuro con un ligero gradiente
+            let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, "#0a0a0a");
+            gradient.addColorStop(1, "#1a1c23");
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Efecto de viñeta (bordes oscuros)
+            let radialGradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height/4, canvas.width/2, canvas.height/2, canvas.width);
+            radialGradient.addColorStop(0, 'rgba(0,0,0,0)');
+            radialGradient.addColorStop(1, 'rgba(0,0,0,0.8)');
+            ctx.fillStyle = radialGradient;
+            ctx.fillRect(0,0, canvas.width, canvas.height);
+
+            // Dibujar partículas
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            animationId = requestAnimationFrame(animateCanvas);
+        }
+
+        // --- 2. LÓGICA DE LA HISTORIA INTERACTIVA ---
+        
+        // Objeto que contiene todos los nodos de la historia
+        const storyNodes = {
+            // --- INICIO ---
+            "inicio": {
+                text: "Estás frente a la Mansión Blackwood. Las historias locales dicen que nadie que entra ha vuelto a salir. La puerta principal, de madera podrida, está entreabierta, meciéndose con el viento frío. La curiosidad te domina.",
+                choices: [
+                    { text: "Entrar por la puerta principal de inmediato.", nextNode: "hall_principal" },
+                    { text: "Rodear la casa buscando otra entrada.", nextNode: "parte_trasera" }
+                ]
+            },
+            
+            // --- CAMINO 1: PUERTA PRINCIPAL ---
+            "hall_principal": {
+                text: "El recibidor es enorme y está cubierto de polvo y telarañas. Una gran escalera sube hacia la oscuridad. A tu izquierda hay una puerta doble hacia lo que parece una biblioteca, y a tu derecha un pasillo estrecho.",
+                choices: [
+                    { text: "Subir por la gran escalera.", nextNode: "segundo_piso" },
+                    { text: "Explorar la biblioteca a la izquierda.", nextNode: "biblioteca" }
+                ]
+            },
+            
+            "segundo_piso": {
+                text: "Los escalones crujen bajo tu peso. Al llegar arriba, escuchas un susurro frío a tu espalda. Un largo pasillo se extiende ante ti, con varias puertas cerradas y una al final que emite una débil luz roja.",
+                choices: [
+                    { text: "Acercarse a la puerta con la luz roja al final.", nextNode: "habitacion_roja" },
+                    { text: "Abrir la primera puerta a tu derecha.", nextNode: "habitacion_infantil" }
+                ]
+            },
+            
+            "biblioteca": {
+                text: "Estanterías llenas de libros mohosos rodean la habitación. En el centro, sobre un escritorio, un libro abierto parece haber sido leído recientemente. De repente, la puerta doble se cierra de golpe detrás de ti.",
+                choices: [
+                    { text: "Leer el libro en el escritorio.", nextNode: "leer_libro_maldito" },
+                    { text: "Buscar una salida oculta detrás de las estanterías.", nextNode: "pasadizo_secreto" }
+                ]
+            },
+            
+            // --- CAMINO 2: PARTE TRASERA ---
+            "parte_trasera": {
+                text: "El jardín trasero está cubierto de maleza. Encuentras la entrada a un sótano. El candado está roto. Un olor a humedad y algo peor emana de las profundidades.",
+                choices: [
+                    { text: "Bajar al sótano oscuro.", nextNode: "sotano" },
+                    { text: "Ignorar el sótano y buscar una ventana abierta en la planta baja.", nextNode: "cocina" }
+                ]
+            },
+            
+            "sotano": {
+                text: "Bajas las escaleras usando la linterna de tu móvil. El sótano es laberíntico. Encuentras una celda antigua con cadenas en la pared. Algo se mueve en las sombras de la esquina.",
+                choices: [
+                    { text: "Acercarse a la sombra para ver qué es.", nextNode: "sombra_sotano" },
+                    { text: "Correr de vuelta hacia las escaleras.", nextNode: "huida_fallida_sotano" }
+                ]
+            },
+            
+            "cocina": {
+                text: "Fuerzas una ventana y entras a una cocina repulsiva. Platos con restos irreconocibles están sobre la mesa. Un cuchillo grande brilla extrañamente limpio sobre la encimera.",
+                choices: [
+                    { text: "Tomar el cuchillo para defenderte.", nextNode: "cuchillo_maldito" },
+                    { text: "Ir hacia el pasillo sin tocar nada.", nextNode: "hall_principal" } // Conecta con el otro camino
+                ]
+            },
+
+            // --- DESARROLLOS FINALES (Llevan a los finales) ---
+            
+            "habitacion_roja": {
+                text: "La luz proviene de un extraño símbolo dibujado en el suelo. Al pisarlo, sientes una presencia abrumadora que entra en tu mente, prometiéndote conocimiento infinito a cambio de tu alma.",
+                choices: [
+                    { text: "Aceptar la oferta de la entidad.", nextNode: "final_1_poseido" },
+                    { text: "Luchar contra la presencia y huir.", nextNode: "final_2_locura" }
+                ]
+            },
+            
+            "pasadizo_secreto": {
+                text: "Empujas una estantería y revela un túnel oscuro. Sigues el túnel y llegas a una habitación oculta llena de tesoros antiguos, pero la puerta de piedra se sella tras de ti.",
+                choices: [
+                    { text: "Celebrar tu riqueza (aunque estés atrapado).", nextNode: "final_3_atrapado" },
+                    { text: "Buscar desesperadamente un mecanismo de salida.", nextNode: "final_3_atrapado" } // Ambas llevan al mismo final en este caso
+                ]
+            },
+            
+            "sombra_sotano": {
+                text: "La sombra toma forma. Es una figura espectral que no parece hostil, sino triste. Te señala un viejo relicario enterrado en el suelo de tierra.",
+                choices: [
+                    { text: "Desenterrar el relicario.", nextNode: "desenterrar_relicario" },
+                    { text: "Ignorar al fantasma y salir huyendo.", nextNode: "huida_fallida_sotano" }
+                ]
+            },
+            
+            "desenterrar_relicario": {
+                text: "Al abrir el relicario, liberas las almas atrapadas de la familia Blackwood. La casa tiembla violentamente y comienza a derrumbarse. Debes salir rápido.",
+                choices: [
+                    { text: "Correr hacia la salida más cercana a ciegas.", nextNode: "final_4_heroe" }
+                ]
+            },
+            
+            // Nodos que terminan mal rápido
+            "habitacion_infantil": {
+                text: "La habitación está llena de juguetes antiguos. Una muñeca de porcelana gira la cabeza lentamente hacia ti y ríe. El terror te paraliza.",
+                choices: [
+                    { text: "Intentar gritar.", nextNode: "final_2_locura" }
+                ]
+            },
+            "leer_libro_maldito": {
+                 text: "Las palabras parecen moverse en la página. Sin darte cuenta, recitas un conjuro antiguo en voz alta. Las sombras te envuelven por completo.",
+                 choices: [
+                     { text: "...", nextNode: "final_1_poseido" }
+                 ]
+            },
+            "huida_fallida_sotano": {
+                 text: "Al intentar correr, tropiezas en la oscuridad. Sientes unas manos heladas agarrando tus tobillos y arrastrándote hacia lo más profundo.",
+                 choices: [
+                     { text: "No puedes hacer nada...", nextNode: "final_2_locura" }
+                 ]
+            },
+            "cuchillo_maldito": {
+                 text: "Al tocar el cuchillo, una sed de sangre incontrolable se apodera de ti. Ya no quieres escapar; quieres cazar a quien se atreva a entrar en TU casa.",
+                 choices: [
+                     { text: "Aceptar tu nuevo rol.", nextNode: "final_1_poseido" }
+                 ]
+            },
+
+
+            // --- FINALES ---
+            
+            // FINAL 1: El nuevo habitante
+            "final_1_poseido": {
+                text: "FINAL 1: EL NUEVO HABITANTE.\n\nTu voluntad ha sido doblegada. Ya no eres tú mismo. Te conviertes en el nuevo guardián de la Mansión Blackwood, acechando en las sombras y esperando a la próxima alma curiosa que se atreva a entrar. La maldición continúa a través de ti.",
+                choices: [
+                    { text: "Jugar de nuevo", nextNode: "inicio" }
+                ]
+            },
+            
+            // FINAL 2: El escape aterrador (Locura)
+            "final_2_locura": {
+                text: "FINAL 2: ESCAPE PERO NO ILESO.\n\nLogras salir de la casa, pero a un costo terrible. Lo que viste y sentiste allí dentro fracturó tu mente. Aunque tu cuerpo está fuera, parte de tu alma se quedó encerrada en esa casa para siempre. Pasas el resto de tus días mirando por encima del hombro.",
+                choices: [
+                    { text: "Jugar de nuevo", nextNode: "inicio" }
+                ]
+            },
+            
+            // FINAL 3: Avaricia y encierro
+            "final_3_atrapado": {
+                text: "FINAL 3: LA TUMBA DE ORO.\n\nEncontraste el tesoro oculto de los Blackwood, pero la habitación era una trampa. No hay salida. Estás rodeado de riquezas incalculables que no te servirán de nada mientras el hambre y la oscuridad te consumen lentamente. Te conviertes en un esqueleto más custodiando el oro.",
+                choices: [
+                    { text: "Jugar de nuevo", nextNode: "inicio" }
+                ]
+            },
+            
+            // FINAL 4: El liberador (Final Bueno/Secreto)
+            "final_4_heroe": {
+                text: "FINAL 4: EL LIBERADOR.\n\nAl liberar las almas atrapadas, rompiste la maldición. Logras escapar justo a tiempo antes de que la casa colapse sobre sí misma. Mientras ves las ruinas desde lejos, sientes una paz profunda. Has sobrevivido y has acabado con el mal que habitaba allí.",
+                choices: [
+                    { text: "Jugar de nuevo", nextNode: "inicio" }
+                ]
+            }
+        };
+
+        // --- 3. MOTOR DE LA INTERFAZ (DOM) ---
+        
+        const storyTextElement = document.getElementById('story-text');
+        const choicesContainer = document.getElementById('choices-container');
+        
+        // Variable para controlar la escritura letra por letra (efecto typewriter)
+        let typingInterval;
+
+        function showNode(nodeId) {
+            const node = storyNodes[nodeId];
+            if (!node) {
+                console.error("Nodo no encontrado:", nodeId);
+                return;
+            }
+
+            // Limpiar opciones anteriores
+            choicesContainer.innerHTML = '';
+            
+            // Detener tipeo anterior si existe
+            if(typingInterval) clearInterval(typingInterval);
+            storyTextElement.innerHTML = ''; // Limpiar texto
+
+            // Efecto de escribir texto letra por letra
+            let charIndex = 0;
+            const textToType = node.text;
+            
+            // Cambiar el color del texto si es un final para darle énfasis
+            if(nodeId.startsWith("final_")) {
+                 storyTextElement.style.color = "#ff5555"; // Rojo pálido para finales
+                 storyTextElement.style.fontWeight = "bold";
+                 
+                 // Efecto visual en el canvas si es un final (poner la pantalla más roja)
+                 if(nodeId === "final_1_poseido") changeCanvasColor('rgba(50, 0, 0, 0.5)');
+                 if(nodeId === "final_3_atrapado") changeCanvasColor('rgba(50, 40, 0, 0.5)');
+                 if(nodeId === "final_4_heroe") changeCanvasColor('rgba(0, 50, 10, 0.3)');
+            } else {
+                 storyTextElement.style.color = "#e0e0e0";
+                 storyTextElement.style.fontWeight = "normal";
+                 changeCanvasColor(null); // Reset color
+            }
+
+            typingInterval = setInterval(() => {
+                if (charIndex < textToType.length) {
+                    // Reemplazar saltos de línea por <br>
+                    if(textToType.charAt(charIndex) === '\n') {
+                        storyTextElement.innerHTML += '<br>';
+                    } else {
+                        storyTextElement.innerHTML += textToType.charAt(charIndex);
+                    }
+                    charIndex++;
+                } else {
+                    clearInterval(typingInterval);
+                    // Mostrar las opciones una vez que el texto ha terminado
+                    renderChoices(node.choices);
+                }
+            }, 30); // Velocidad de escritura en ms
+        }
+
+        function renderChoices(choices) {
+            choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'choice-btn';
+                button.textContent = choice.text;
+                button.onclick = () => {
+                    // Limpiar la pantalla antes de la siguiente opción
+                    storyTextElement.innerHTML = '';
+                    choicesContainer.innerHTML = '';
+                    
+                    // Pequeño retraso para dar sensación de transición
+                    setTimeout(() => {
+                        showNode(choice.nextNode);
+                    }, 300);
+                };
+                choicesContainer.appendChild(button);
+            });
+        }
+        
+        // Función auxiliar para alterar un poco el ambiente del canvas en los finales
+        let overlayColor = null;
+        function changeCanvasColor(color) {
+            overlayColor = color;
+        }
+        
+        // Sobreescribimos la función de animación original para añadir el filtro de color si existe
+        const originalAnimateCanvas = animateCanvas;
+        animateCanvas = function() {
+            // Detener el loop original
+            cancelAnimationFrame(animationId);
+            
+            // Dibujar fondo y partículas normales
+            let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, "#0a0a0a");
+            gradient.addColorStop(1, "#1a1c23");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            let radialGradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height/4, canvas.width/2, canvas.height/2, canvas.width);
+            radialGradient.addColorStop(0, 'rgba(0,0,0,0)');
+            radialGradient.addColorStop(1, 'rgba(0,0,0,0.8)');
+            ctx.fillStyle = radialGradient;
+            ctx.fillRect(0,0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            // Añadir capa de color encima si hay un final
+            if (overlayColor) {
+                ctx.fillStyle = overlayColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            animationId = requestAnimationFrame(animateCanvas);
+        };
+
+
+        // --- 4. INICIALIZACIÓN ---
+        window.onload = function() {
+            initParticles();
+            animateCanvas(); // Iniciar animación del fondo
+            
+            // Iniciar la historia después de un pequeño retraso para asegurar que todo carga
+            setTimeout(() => {
+                showNode("inicio");
+            }, 500);
+        };
+
+    </script>
+</body>
+</html>
